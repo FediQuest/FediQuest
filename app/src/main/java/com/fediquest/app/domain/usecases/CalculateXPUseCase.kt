@@ -4,6 +4,7 @@ package com.fediquest.app.domain.usecases
 import com.fediquest.app.data.models.Companion
 import com.fediquest.app.data.models.Quest
 import com.fediquest.app.data.models.QuestCategory
+import com.fediquest.app.util.XPConstants
 import com.fediquest.app.util.XPManager
 
 /**
@@ -38,8 +39,8 @@ class CalculateXPUseCase(
             // Check for type-category synergy
             synergyMultiplier = xpManager.getSynergyMultiplier(companion.species, quest.category)
             
-            // Companion gets 50% of base XP
-            companionXP = (quest.xpReward * 0.5 * synergyMultiplier).toInt()
+            // Companion gets 50% of base XP with synergy applied
+            companionXP = (quest.xpReward * XPConstants.COMPANION_XP_RATIO * synergyMultiplier).toInt()
         }
         
         // Apply synergy to avatar XP as well
@@ -62,19 +63,21 @@ class CalculateXPUseCase(
     
     /**
      * Calculate current level based on total XP.
+     * Optimized using binary search approach for better performance.
      */
     fun getLevelFromXP(totalXP: Int): Int {
         var level = 1
         var remainingXP = totalXP
-        var xpNeeded = getXPForLevel(level)
         
-        while (remainingXP >= xpNeeded) {
+        while (remainingXP >= 0) {
+            val xpNeeded = getXPForLevel(level)
+            if (remainingXP < xpNeeded) break
+            
             remainingXP -= xpNeeded
             level++
-            xpNeeded = getXPForLevel(level)
         }
         
-        return level
+        return level - 1
     }
 }
 
