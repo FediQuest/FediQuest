@@ -94,8 +94,8 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
 
     // ARCore + SceneView (OSS Sceneform)
+    implementation("io.github.sceneview:arsceneview:0.10.0")
     implementation("io.github.sceneview:sceneview:0.10.0")
-    implementation("com.gorisse.thomas.sceneview:sceneview:1.6.0")
 
     // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
