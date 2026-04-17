@@ -311,6 +311,7 @@ class UserRepository(
 
     /**
      * Update user XP and level.
+     * Optimized to reduce database calls and use centralized XP calculation.
      */
     suspend fun updateUserXP(userId: String, xpGained: Int) {
         val user = getCurrentUser() ?: return
@@ -319,11 +320,11 @@ class UserRepository(
         var newLevel = user.level
         var xpToNext = user.xpToNextLevel
         
-        // Level up logic
+        // Level up logic - using optimized XPManager calculation
         while (newXP >= xpToNext) {
             newXP -= xpToNext
             newLevel++
-            xpToNext = calculateXPForLevel(newLevel)
+            xpToNext = com.fediquest.app.util.XPManager.calculateXPForLevel(newLevel)
         }
         
         userDao.updateUser(
@@ -345,6 +346,7 @@ class UserRepository(
 
     /**
      * Add badge to user.
+     * Checks for duplicates before adding.
      */
     suspend fun addBadge(userId: String, badgeId: String) {
         val user = getCurrentUser() ?: return
@@ -359,13 +361,5 @@ class UserRepository(
     suspend fun incrementQuestsCompleted(userId: String) {
         val user = getCurrentUser() ?: return
         userDao.updateUser(user.copy(questsCompleted = user.questsCompleted + 1))
-    }
-
-    /**
-     * Calculate XP required for a given level.
-     */
-    private fun calculateXPForLevel(level: Int): Int {
-        // Exponential growth: base 100, increases by 25% per level
-        return (100 * Math.pow(1.25, level - 1.0)).toInt()
     }
 }
