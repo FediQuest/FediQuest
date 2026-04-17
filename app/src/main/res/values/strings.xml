@@ -76,7 +76,81 @@
     <string name="success">Success</string>
     <string name="retry">Retry</string>
     
+    <!-- Companion Specific -->
+    <string name="companion_happiness_label">Happiness</string>
+    <string name="companion_energy_label">Energy</string>
+    <string name="companion_xp">XP</string>
+    <string name="companion_play">Play</string>
+    <string name="companion_select">Select Companion</string>
+    <string name="companion_eco_drake">Eco Drake</string>
+    <string name="companion_green_phoenix">Green Phoenix</string>
+    <string name="companion_forest_unicorn">Forest Unicorn</string>
+    <string name="companion_aqua_turtle">Aqua Turtle</string>
+    <string name="companion_solar_lion">Solar Lion</string>
+    <string name="companion_evolution_requirement">Reach Level %d to evolve</string>
+    
+    <!-- Quest Types -->
+    <string name="quest_type_nature">Nature</string>
+    <string name="quest_type_recycle">Recycling</string>
+    <string name="quest_type_cleanup">Cleanup</string>
+    <string name="quest_type_planting">Planting</string>
+    <string name="quest_type_wildlife">Wildlife</string>
+    <string name="quest_type_ocean">Ocean</string>
+    
+    <!-- Quest Detail -->
+    <string name="quest_xp_reward_label">XP Reward</string>
+    <string name="quest_coin_reward_label">Coins</string>
+    <string name="quest_distance_label">Distance</string>
+    <string name="quest_difficulty_label">Difficulty</string>
+    <string name="quest_description_label">Description</string>
+    <string name="quest_requirements_label">Requirements</string>
+    <string name="quest_location_label">Location</string>
+    <string name="quest_show_on_map">Show on Map</string>
+    <string name="quest_progress_label">Quest Progress</string>
+    <string name="quest_share_fediverse">Share to Fediverse</string>
+    <string name="quest_create">Create Quest</string>
+    <string name="quest_edit">Edit Quest</string>
+    <string name="quest_delete">Delete Quest</string>
+    <string name="quest_share_success">Quest shared successfully!</string>
+    <string name="quest_share_error">Failed to share quest</string>
+    
+    <!-- Avatar Specific -->
+    <string name="avatar_preview">Avatar Preview</string>
+    <string name="avatar_no_items">No items in this category</string>
+    <string name="avatar_save">Save Look</string>
+    <string name="avatar_reset">Reset</string>
+    
+    <!-- Icons Content Descriptions -->
+    <string name="xp_icon">XP Icon</string>
+    <string name="coin_icon">Coin Icon</string>
+    <string name="location_icon">Location Icon</string>
+    <string name="difficulty_icon">Difficulty Icon</string>
+    
+    <!-- Accessibility -->
+    <string name="a11y_quest_image">Quest image</string>
+    <string name="a11y_creator_avatar">Quest creator avatar</string>
+    <string name="a11y_back_button">Back button</string>
+    <string name="a11y_share_button">Share to Fediverse</string>
+    
+    <!-- Fediverse Integration -->
+    <string name="fediverse_instance">Fediverse Instance</string>
+    <string name="fediverse_connect">Connect to Fediverse</string>
+    <string name="fediverse_disconnect">Disconnect</string>
+    <string name="fediverse_connected">Connected to %s</string>
+    <string name="fediverse_post_quest">Post Quest</string>
+    <string name="fediverse_post_completion">Post Completion</string>
+    <string name="fediverse_hashtag_default">#FediQuest #EcoChallenge</string>
+    
+    <!-- AR Features -->
+    <string name="ar_mode">AR Mode</string>
+    <string name="ar_not_supported">AR not supported on this device</string>
+    <string name="ar_place_marker">Place AR Marker</string>
+    <string name="ar_scan_area">Scan Area</string>
+    
     <!-- Permissions -->
+    <string name="permission_storage_title">Storage Permission Required</string>
+    <string name="permission_storage_rationale">Storage permission is needed to save quest photos</string>
+    <!-- Permissions (restored) -->
     <string name="permission_location_title">Location Permission Required</string>
     <string name="permission_camera_title">Camera Permission Required</string>
     <string name="permission_notification_title">Notification Permission Required</string>
@@ -89,7 +163,7 @@
     <string name="error_quest_not_found">Quest not found</string>
     <string name="error_too_far">You are too far from the quest location</string>
     
-    <!-- Accessibility -->
+    <!-- Accessibility (restored) -->
     <string name="a11y_map_view">Map showing nearby eco-quests</string>
     <string name="a11y_camera_preview">Camera preview for scanning trash</string>
     <string name="a11y_avatar_image">Avatar image</string>
