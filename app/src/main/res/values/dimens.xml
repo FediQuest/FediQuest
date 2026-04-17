@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- File: app/src/main/res/values/dimens.xml -->
+<resources>
+    <!-- Avatar Dimensions -->
+    <dimen name="avatar_image_size">80dp</dimen>
+    <dimen name="avatar_item_margin">8dp</dimen>
+    <dimen name="avatar_preview_size">150dp</dimen>
+    
+    <!-- Companion Dimensions -->
+    <dimen name="companion_image_size">200dp</dimen>
+    <dimen name="companion_stat_height">40dp</dimen>
+    
+    <!-- Quest Dimensions -->
+    <dimen name="quest_card_elevation">4dp</dimen>
+    <dimen name="quest_card_corner_radius">12dp</dimen>
+    <dimen name="quest_image_height">280dp</dimen>
+    <dimen name="quest_icon_size">24dp</dimen>
+    
+    <!-- Map Dimensions -->
+    <dimen name="map_marker_size">40dp</dimen>
+    <dimen name="mini_map_height">150dp</dimen>
+    
+    <!-- General Spacing -->
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+    <dimen name="spacing_xlarge">32dp</dimen>
+    
+    <!-- Button Heights -->
+    <dimen name="button_height_min">48dp</dimen>
+    <dimen name="button_height_default">56dp</dimen>
+    
+    <!-- Text Sizes -->
+    <dimen name="text_size_small">12sp</dimen>
+    <dimen name="text_size_medium">14sp</dimen>
+    <dimen name="text_size_large">16sp</dimen>
+    <dimen name="text_size_xlarge">18sp</dimen>
+    <dimen name="text_size_title">24sp</dimen>
+    
+    <!-- Card Dimensions -->
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_margin">8dp</dimen>
+    
+    <!-- Progress Bar -->
+    <dimen name="progress_bar_height">8dp</dimen>
+    
+    <!-- Chip -->
+    <dimen name="chip_height">32dp</dimen>
+    <dimen name="chip_text_size">12sp</dimen>
+</resources>
