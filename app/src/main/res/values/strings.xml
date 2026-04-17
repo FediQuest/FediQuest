@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FediQuest</string>
+    
+    <!-- Navigation -->
+    <string name="nav_map">Map</string>
+    <string name="nav_scan">Scan</string>
+    <string name="nav_avatar">Avatar</string>
+    <string name="nav_companion">Companion</string>
+    <string name="nav_profile">Profile</string>
+    
+    <!-- Map Fragment -->
+    <string name="map_permission_rationale">Location permission is needed to show nearby eco-quests</string>
+    <string name="map_no_location">Unable to get your location</string>
+    <string name="map_loading_quests">Loading quests…</string>
+    <string name="map_filter_nature">Nature</string>
+    <string name="map_filter_recycle">Recycling</string>
+    <string name="map_filter_cleanup">Cleanup</string>
+    <string name="map_filter_planting">Planting</string>
+    
+    <!-- Scan Fragment -->
+    <string name="scan_permission_rationale">Camera permission is needed to scan trash and complete quests</string>
+    <string name="scan_start_detection">Start Detection</string>
+    <string name="scan_stop_detection">Stop Detection</string>
+    <string name="scan_capturing">Capturing…</string>
+    <string name="scan_object_detected">Object Detected!</string>
+    <string name="scan_no_trash_detected">No trash detected. Try again.</string>
+    <string name="scan_quest_completed">Quest Completed!</string>
+    
+    <!-- Quest Detail -->
+    <string name="quest_xp_reward">%d XP</string>
+    <string name="quest_coin_reward">%d Coins</string>
+    <string name="quest_distance">%d m away</string>
+    <string name="quest_difficulty_easy">Easy</string>
+    <string name="quest_difficulty_medium">Medium</string>
+    <string name="quest_difficulty_hard">Hard</string>
+    <string name="quest_difficulty_expert">Expert</string>
+    <string name="quest_start">Start Quest</string>
+    <string name="quest_complete">Complete Quest</string>
+    <string name="quest_cancel">Cancel Quest</string>
+    
+    <!-- Avatar -->
+    <string name="avatar_customize">Customize Avatar</string>
+    <string name="avatar_hair">Hair</string>
+    <string name="avatar_outfit">Outfit</string>
+    <string name="avatar_accessory">Accessory</string>
+    <string name="avatar_shoes">Shoes</string>
+    <string name="avatar_equipped">Equipped</string>
+    <string name="avatar_locked">Locked</string>
+    <string name="avatar_unlock_at">Unlock at %s</string>
+    
+    <!-- Companion -->
+    <string name="companion_level">Level %d</string>
+    <string name="companion_happiness">Happiness: %d%%</string>
+    <string name="companion_energy">Energy: %d%%</string>
+    <string name="companion_evolve">Evolve</string>
+    <string name="companion_interact">Interact</string>
+    <string name="companion_feed">Feed</string>
+    <string name="companion_rest">Rest</string>
+    
+    <!-- Profile -->
+    <string name="profile_level">Level %d</string>
+    <string name="profile_xp">%d / %d XP</string>
+    <string name="profile_coins">%d Coins</string>
+    <string name="profile_quests_completed">%d Quests Completed</string>
+    <string name="profile_badges">Badges</string>
+    <string name="profile_settings">Settings</string>
+    
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="close">Close</string>
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="success">Success</string>
+    <string name="retry">Retry</string>
+    
+    <!-- Permissions -->
+    <string name="permission_location_title">Location Permission Required</string>
+    <string name="permission_camera_title">Camera Permission Required</string>
+    <string name="permission_notification_title">Notification Permission Required</string>
+    <string name="permission_settings">Open Settings</string>
+    
+    <!-- Errors -->
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_location">Unable to get location</string>
+    <string name="error_camera">Camera error</string>
+    <string name="error_quest_not_found">Quest not found</string>
+    <string name="error_too_far">You are too far from the quest location</string>
+    
+    <!-- Accessibility -->
+    <string name="a11y_map_view">Map showing nearby eco-quests</string>
+    <string name="a11y_camera_preview">Camera preview for scanning trash</string>
+    <string name="a11y_avatar_image">Avatar image</string>
+    <string name="a11y_companion_image">Companion creature image</string>
+    <string name="a11y_quest_marker">Quest marker: %s</string>
+</resources>

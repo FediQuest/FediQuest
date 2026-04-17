@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/navigation_map">
+
+    <!-- Map Fragment -->
+    <fragment
+        android:id="@+id/navigation_map"
+        android:name="com.fediquest.app.ui.map.MapFragment"
+        android:label="Map" />
+
+    <!-- Scan Fragment -->
+    <fragment
+        android:id="@+id/navigation_scan"
+        android:name="com.fediquest.app.ui.scan.CameraScanFragment"
+        android:label="Scan" />
+
+    <!-- Avatar Fragment -->
+    <fragment
+        android:id="@+id/navigation_avatar"
+        android:name="com.fediquest.app.ui.avatar.AvatarFragment"
+        android:label="Avatar" />
+
+    <!-- Companion Fragment -->
+    <fragment
+        android:id="@+id/navigation_companion"
+        android:name="com.fediquest.app.ui.avatar.CompanionFragment"
+        android:label="Companion" />
+
+    <!-- Quest Detail Fragment -->
+    <fragment
+        android:id="@+id/questDetailFragment"
+        android:name="com.fediquest.app.ui.quest.QuestDetailFragment"
+        android:label="Quest Detail">
+        <argument
+            android:name="questId"
+            app:argType="string" />
+    </fragment>
+
+</navigation>
