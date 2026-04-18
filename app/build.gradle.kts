@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.fediquest.app"
+    namespace = "org.fediquest"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.fediquest.app"
+        applicationId = "org.fediquest"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -22,6 +22,10 @@ android {
         // GitHub: https://github.com/SceneView/sceneview
         // License: Apache 2.0 (FOSS-friendly)
         // Note: SceneView handles ARCore internally, no separate ARCore dependency needed
+        
+        // Enable BuildConfig generation
+        buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
+        buildConfigField("Integer", "VERSION_CODE", "$versionCode")
     }
 
     buildTypes {
@@ -49,6 +53,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     // Keep TFLite models and ARCore classes

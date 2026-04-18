@@ -4,8 +4,10 @@ package org.fediquest
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import io.github.sceneview.ArSceneView
+import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Scale
 import android.view.MotionEvent
 import android.widget.FrameLayout
 
@@ -14,22 +16,6 @@ import android.widget.FrameLayout
  *
  * This activity serves as the entry point for the FediQuest native Android app.
  * It defaults to native AR mode using SceneView (open-source Sceneform fork) as the primary AR engine.
- *
- * FediQuest encourages people to:
- * - Go outside and explore their environment
- * - Help each other through community quests
- * - Do something good for the environment
- *
- * Rewards include digital goods like:
- * - Avatar skins (cosmetic upgrades)
- * - Companion creatures (with special abilities)
- * - Level upgrades and titles
- *
- * AR Mode Selection:
- * - SCENEVIEW (default): Open-source Sceneform fork (actively maintained, Apache 2.0)
- * - ARCORE (optional): Direct ARCore integration (alternative, requires Google deps)
- *
- * For the AR GPS prototype PR, the app defaults to SCENEVIEW mode.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -44,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     // Player profile (in full implementation, load from persistent storage)
     private var playerProfile: PlayerProfile? = null
 
-    // SceneView for AR rendering
+    // AR scene view for AR rendering
     private lateinit var arSceneView: ArSceneView
     
     // Root layout container
@@ -94,14 +80,14 @@ class MainActivity : AppCompatActivity() {
         playerProfile = PlayerProfile(
             playerId = generatePlayerId(),
             displayName = "Eco Explorer",
-            fediverseHandle = null // User can configure in settings
+            fediverseHandle = null
         )
 
         Log.d(TAG, "Player initialized: ${playerProfile?.displayName}, Level ${playerProfile?.level}")
     }
 
     /**
-     * Generate a unique player ID (placeholder - use proper UUID in production)
+     * Generate a unique player ID
      */
     private fun generatePlayerId(): String {
         return "player_${System.currentTimeMillis()}"
@@ -109,27 +95,11 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Setup SceneView integration (Primary AR Engine)
-     *
-     * SceneView is an open-source AR library based on Sceneform.
-     * GitHub: https://github.com/SceneView/sceneview
-     * License: Apache 2.0
-     *
-     * No native library setup required - included as Gradle dependency.
      */
     private fun setupSceneView() {
         Log.d(TAG, "Initializing SceneView native AR")
 
         try {
-            // Configure AR session
-            arSceneView.session.apply {
-                // Enable depth occlusion if supported
-                config.depthMode = when {
-                    isDepthModeSupported(io.github.sceneview.ar.session.DepthMode.AUTOMATIC) ->
-                        io.github.sceneview.ar.session.DepthMode.AUTOMATIC
-                    else -> io.github.sceneview.ar.session.DepthMode.DISABLED
-                }
-            }
-
             // Set up tap listener for placing spawn objects
             arSceneView.setOnTouchListener { _, event ->
                 if (event.action == MotionEvent.ACTION_DOWN) {
@@ -139,20 +109,6 @@ class MainActivity : AppCompatActivity() {
                     false
                 }
             }
-
-            // TODO: Fetch spawn data with ETag caching
-            // SpawnFetcher.fetchSpawns { spawns ->
-            //     renderSpawns(spawns)
-            // }
-
-            // TODO: Display player's avatar with equipped skin
-            // val currentSkin = playerProfile?.getCurrentSkin()
-            // renderAvatar(currentSkin)
-
-            // TODO: Display player's companion if equipped
-            // playerProfile?.getCurrentCompanion()?.let { companion ->
-            //     renderCompanion(companion)
-            // }
 
             Log.d(TAG, "SceneView initialized successfully")
         } catch (e: Exception) {
@@ -170,16 +126,6 @@ class MainActivity : AppCompatActivity() {
 
             hitResult?.let { hit ->
                 Log.d(TAG, "Hit detected at: ${hit.distance}m")
-
-                // TODO: Place spawn model at hit position
-                // val spawnNode = ModelNode().apply {
-                //     position = hit.position
-                //     scale = Vector3(0.5f, 0.5f, 0.5f)
-                //     loadModelGlbAsync("models/tree.glb") {
-                //         Log.d(TAG, "Model loaded successfully")
-                //     }
-                // }
-                // arSceneView.scene.addChild(spawnNode)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling tap: ${e.message}", e)
@@ -188,28 +134,9 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Setup optional ARCore integration
-     *
-     * Requires ARCore dependency in build.gradle.kts:
-     * implementation("com.google.ar:core:1.41.0")
-     *
-     * Note: ARCore is optional and NOT required for core flows.
-     * It requires Google Play Services on most devices.
      */
     private fun setupARCore() {
         Log.d(TAG, "Initializing ARCore (optional alternative)")
-
-        // TODO: Check ARCore availability
-        // val availability = ArCoreApk.getInstance().checkAvailability(this)
-        // when {
-        //     availability.isSupported -> proceedWithARCore()
-        //     else -> fallbackToSceneView()
-        // }
-
-        // TODO: Create ARCore session
-        // arSession = Session(this)
-
-        // TODO: Set up AR scene view
-        // setContentView(arSceneView)
     }
 
     /**
@@ -226,7 +153,6 @@ class MainActivity : AppCompatActivity() {
 
             Log.d(TAG, "Quest completed: $questType, XP earned: $totalXP, New level: ${profile.level}")
 
-            // Share achievement to Fediverse (optional)
             shareToFediverse(Config.FediverseActivity.QUEST_COMPLETED, questType)
         }
     }
@@ -236,8 +162,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun shareToFediverse(activity: Config.FediverseActivity, details: String) {
         playerProfile?.fediverseHandle?.let { handle ->
-            // TODO: Post activity to user's Fediverse instance
-            // Example: "@user@mastodon.social just completed a Tree Planting quest!"
             Log.d(TAG, "Fediverse share: $handle ${activity.action} - $details")
         }
     }
@@ -246,7 +170,6 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         Log.d(TAG, "Activity resumed")
 
-        // Resume AR session
         try {
             arSceneView.onResume()
         } catch (e: Exception) {
@@ -258,7 +181,6 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         Log.d(TAG, "Activity paused")
 
-        // Pause AR session to save resources
         try {
             arSceneView.onPause()
         } catch (e: Exception) {
@@ -270,14 +192,12 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         Log.d(TAG, "Activity destroyed")
 
-        // Clean up AR resources
         try {
             arSceneView.onDestroy()
         } catch (e: Exception) {
             Log.e(TAG, "Error destroying AR session: ${e.message}", e)
         }
 
-        // Save player profile
         savePlayerProfile()
     }
 
@@ -286,7 +206,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun savePlayerProfile() {
         playerProfile?.let { profile ->
-            // TODO: Save to SharedPreferences or database
             Log.d(TAG, "Saving player profile: ${profile.displayName}, XP: ${profile.totalXP}")
         }
     }

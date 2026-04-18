@@ -57,8 +57,23 @@ print_info "Using Android SDK at: $ANDROID_HOME"
 
 # Check if ANDROID_NDK_HOME is set (optional for SceneView)
 if [ -z "$ANDROID_NDK_HOME" ]; then
-    print_warn "ANDROID_NDK_HOME is not set. SceneView does not require NDK."
-    print_info "If you want to add custom native code, set ANDROID_NDK_HOME manually."
+    # Try to find NDK in common locations
+    if [ -d "$ANDROID_HOME/ndk-bundle" ]; then
+        export ANDROID_NDK_HOME="$ANDROID_HOME/ndk-bundle"
+        print_info "Found Android NDK at: $ANDROID_NDK_HOME"
+    elif [ -d "$ANDROID_HOME/ndk" ]; then
+        # Find the latest NDK version
+        LATEST_NDK=$(ls -1 "$ANDROID_HOME/ndk" 2>/dev/null | sort -V | tail -n 1)
+        if [ -n "$LATEST_NDK" ]; then
+            export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$LATEST_NDK"
+            print_info "Found Android NDK at: $ANDROID_NDK_HOME"
+        fi
+    fi
+    
+    if [ -z "$ANDROID_NDK_HOME" ]; then
+        print_warn "ANDROID_NDK_HOME is not set. SceneView does not require NDK."
+        print_info "If you want to add custom native code, set ANDROID_NDK_HOME manually."
+    fi
 else
     print_info "Using Android NDK at: $ANDROID_NDK_HOME"
 fi

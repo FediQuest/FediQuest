@@ -3,6 +3,7 @@ package org.fediquest
 
 import android.app.Application
 import android.util.Log
+import org.fediquest.BuildConfig
 
 /**
  * FediQuest Application Class
@@ -32,7 +33,7 @@ class FediQuestApp : Application() {
         
         Log.d(TAG, "FediQuest Application starting...")
         Log.d(TAG, "Package: ${packageName}")
-        Log.d(TAG, "Version: ${buildConfig.versionName} (${buildConfig.versionCode})")
+        Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         
         // Initialize app-wide components
         initializeApp()
