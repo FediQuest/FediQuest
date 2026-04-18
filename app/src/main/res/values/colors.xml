@@ -1,66 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- File: app/src/main/res/values/colors.xml -->
 <resources>
-    <!-- Primary Colors -->
-    <color name="primary">#4CAF50</color>
-    <color name="primary_dark">#388E3C</color>
-    <color name="primary_light">#81C784</color>
-    <color name="accent">#FF9800</color>
+    <!-- Primary Brand Colors -->
+    <color name="colorPrimary">#2E7D32</color> <!-- Forest Green -->
+    <color name="colorPrimaryDark">#1B5E20</color>
+    <color name="colorPrimaryLight">#4CAF50</color>
+    <color name="colorAccent">#FF9800</color> <!-- Eco Orange -->
+
+    <!-- Backgrounds -->
+    <color name="backgroundPrimary">#F1F8E9</color>
+    <color name="backgroundCard">#FFFFFF</color>
+    <color name="backgroundDark">#121212</color>
+    <color name="surfaceDark">#1E1E1E</color>
     
-    <!-- Background Colors -->
-    <color name="background">#FAFAFA</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="card_background">#FFFFFF</color>
-    
+    <!-- Dark Theme Specific -->
+    <color name="dark_background_primary">#121212</color>
+    <color name="dark_background_card">#1E1E1E</color>
+    <color name="dark_background_secondary">#2C2C2C</color>
+    <color name="dark_text_primary">#E0E0E0</color>
+
     <!-- Text Colors -->
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
-    <color name="text_hint">#BDBDBD</color>
-    <color name="text_on_primary">#FFFFFF</color>
-    
+    <color name="textPrimary">#212121</color>
+    <color name="textSecondary">#757575</color>
+    <color name="textHint">#BDBDBD</color>
+    <color name="textOnPrimary">#FFFFFF</color>
+    <color name="textOnDark">#E0E0E0</color>
+
     <!-- Quest Type Colors -->
     <color name="quest_nature">#4CAF50</color>
-    <color name="quest_recycle">#2196F3</color>
-    <color name="quest_cleanup">#795548</color>
+    <color name="quest_recycle">#FF9800</color>
+    <color name="quest_cleanup">#F44336</color>
     <color name="quest_planting">#8BC34A</color>
-    <color name="quest_wildlife">#FF9800</color>
-    <color name="quest_ocean">#00BCD4</color>
-    
-    <!-- Difficulty Colors -->
-    <color name="difficulty_easy">#4CAF50</color>
-    <color name="difficulty_medium">#FF9800</color>
-    <color name="difficulty_hard">#F44336</color>
-    <color name="difficulty_expert">#9C27B0</color>
-    
+    <color name="quest_wildlife">#9C27B0</color>
+    <color name="quest_ocean">#03A9F4</color>
+
     <!-- Companion Colors -->
-    <color name="companion_eco_drake">#4CAF50</color>
-    <color name="companion_green_phoenix">#8BC34A</color>
-    <color name="companion_forest_unicorn">#66BB6A</color>
-    <color name="companion_aqua_turtle">#00BCD4</color>
-    <color name="companion_solar_lion">#FF9800</color>
-    
-    <!-- Status Colors -->
-    <color name="status_available">#4CAF50</color>
-    <color name="status_in_progress">#FF9800</color>
-    <color name="status_completed">#2196F3</color>
-    <color name="status_failed">#F44336</color>
-    
-    <!-- Progress Bar Colors -->
-    <color name="progress_background">#E0E0E0</color>
-    <color name="progress_primary">#4CAF50</color>
-    <color name="progress_accent">#FF9800</color>
-    
+    <color name="companion_eco_drake">#2E7D32</color>
+    <color name="companion_green_phoenix">#FF5722</color>
+    <color name="companion_forest_unicorn">#9C27B0</color>
+    <color name="companion_aqua_turtle">#03A9F4</color>
+    <color name="companion_solar_lion">#FFC107</color>
+
     <!-- Fediverse Colors -->
-    <color name="fediverse_primary">#6364FF</color>
-    <color name="fediverse_accent">#563ACC</color>
+    <color name="fediverse_blue">#1DA1F2</color>
+    <color name="mastodon_purple">#6364FF</color>
+
+    <!-- Status Colors -->
+    <color name="status_success">#4CAF50</color>
+    <color name="status_warning">#FFC107</color>
+    <color name="status_error">#F44336</color>
+    <color name="status_pending">#9E9E9E</color>
+
+    <!-- Bottom Navigation -->
+    <color name="bottom_nav_color">@color/colorPrimary</color>
+    <color name="bottom_nav_background">#FFFFFF</color>
+    <color name="bottom_nav_item_inactive">#9E9E9E</color>
+    <color name="bottom_nav_item_active">@color/colorPrimary</color>
+
+    <!-- Legacy Aliases (Fixes the build errors) -->
+    <color name="color_primary">@color/colorPrimary</color>
+    <color name="color_primary_dark">@color/colorPrimaryDark</color>
+    <color name="color_primary_light">@color/colorPrimaryLight</color>
+    <color name="color_accent">@color/colorAccent</color>
+    <color name="background_primary">@color/backgroundPrimary</color>
+    <color name="background_card">@color/backgroundCard</color>
     
-    <!-- AR Colors -->
-    <color name="ar_overlay">#80000000</color>
-    <color name="ar_marker">#FF5722</color>
+    <!-- Missing Text Aliases -->
+    <color name="text_primary">@color/textPrimary</color>
+    <color name="text_secondary">@color/textSecondary</color>
+    <color name="text_hint">@color/textHint</color>
+    <color name="text_on_primary">@color/textOnPrimary</color>
     
-    <!-- Common Colors -->
-    <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
-    <color name="transparent">#00000000</color>
-    <color name="divider">#E0E0E0</color>
+        <!-- XP Bar Colors -->
+    <color name="xp_bar_background">#E0E0E0</color>
+    <color name="xp_bar_progress">#FF9800</color>
+
+    <!-- Camera Overlay -->
+    <color name="overlay_scrim">#80000000</color>
+    
 </resources>
