@@ -4,12 +4,20 @@ package org.fediquest
 import android.app.Application
 import android.util.Log
 import org.fediquest.BuildConfig
+import org.fediquest.data.database.AppDatabase
+import org.fediquest.ml.tflite.ImageVerifier
+import org.fediquest.fediverse.client.ActivityPubClientFactory
+import org.fediquest.companion.evolution.CompanionEvolutionManagerFactory
 
 /**
  * FediQuest Application Class
  *
  * Main application entry point for FediQuest.
  * Handles global app initialization, configuration, and lifecycle management.
+ * 
+ * Architecture Principles:
+ * - Offline-first: All core features work without internet
+ * - Opt-in AI/Fediverse: ML and social features are disabled by default
  */
 class FediQuestApp : Application() {
 
@@ -25,8 +33,36 @@ class FediQuestApp : Application() {
         fun getInstance(): FediQuestApp = instance ?: synchronized(this) {
             instance ?: throw IllegalStateException("Application not initialized")
         }
+        
+        /**
+         * Get database instance
+         */
+        fun getDatabase(): AppDatabase {
+            return AppDatabase.getInstance(getInstance())
+        }
+        
+        /**
+         * Get image verifier (AI feature, opt-in)
+         */
+        fun getImageVerifier(): ImageVerifier {
+            return ImageVerifier(getInstance())
+        }
+        
+        /**
+         * Get ActivityPub client (Fediverse feature, opt-in)
+         */
+        fun getActivityPubClient() = ActivityPubClientFactory.getInstance(getInstance())
+        
+        /**
+         * Get companion evolution manager
+         */
+        fun getCompanionManager() = CompanionEvolutionManagerFactory.getInstance(getInstance())
     }
 
+    // Lazy-initialized components
+    private val _database by lazy { AppDatabase.getInstance(this) }
+    private val _imageVerifier by lazy { ImageVerifier(this) }
+    
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -45,19 +81,38 @@ class FediQuestApp : Application() {
     private fun initializeApp() {
         Log.d(TAG, "Initializing application components...")
         
-        // TODO: Initialize database
-        // AppDatabase.init(this)
+        // Initialize Room Database (offline-first storage)
+        try {
+            _database
+            Log.d(TAG, "✓ Room database initialized")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize database: ${e.message}")
+        }
         
-        // TODO: Initialize preferences
-        // AppPreferences.init(this)
+        // Initialize TF Lite Image Verifier (opt-in AI feature)
+        // Note: This runs in stub mode if no model is present
+        try {
+            _imageVerifier.initialize()
+            val aiStatus = if (_imageVerifier.isAiAvailable()) {
+                "✓ AI verification enabled"
+            } else {
+                "○ AI verification disabled (stub mode)"
+            }
+            Log.d(TAG, aiStatus)
+        } catch (e: Exception) {
+            Log.w(TAG, "Image verifier initialization failed: ${e.message}")
+        }
         
-        // TODO: Initialize network client
-        // NetworkClient.init(this)
+        // Note: ActivityPub client is lazy-initialized and opt-in
+        // It will only be configured if user explicitly enables Fediverse features
         
-        // TODO: Initialize location service
-        // LocationService.init(this)
+        // Note: Companion manager is lazy-initialized
+        // Companions work offline-first with local storage
         
         Log.d(TAG, "Application components initialized successfully")
+        Log.d(TAG, "Offline-first mode: ENABLED")
+        Log.d(TAG, "AI features: OPT-IN (disabled by default)")
+        Log.d(TAG, "Fediverse features: OPT-IN (disabled by default)")
     }
 
     /**
@@ -69,10 +124,25 @@ class FediQuestApp : Application() {
      * Check if debug logging is enabled
      */
     fun isDebugLoggingEnabled(): Boolean = Config.DEBUG_LOGGING
+    
+    /**
+     * Get database instance
+     */
+    fun getDatabase(): AppDatabase = _database
+    
+    /**
+     * Get image verifier
+     */
+    fun getImageVerifier(): ImageVerifier = _imageVerifier
 
     override fun onTerminate() {
         super.onTerminate()
         Log.d(TAG, "FediQuest Application terminating...")
+        
+        // Clean up resources
+        _imageVerifier.close()
+        AppDatabase.closeInstance()
+        
         instance = null
     }
 
