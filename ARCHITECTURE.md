@@ -43,8 +43,9 @@ app/src/main/java/org/fediquest/
 │
 ├── Config.kt                      # App configuration constants
 ├── FediQuestApp.kt                # Application class
-├── MainActivity.kt                # Main UI activity
+├── MainActivity.kt                # Main UI activity + CameraX integration
 ├── PlayerProfile.kt               # Player progression model
+├── QuestVerifier.kt               # Quest proof verification service
 └── SpawnFetcher.kt                # Quest spawn fetching
 ```
 
@@ -78,7 +79,44 @@ app/src/main/java/org/fediquest/
 1. Add `quest_verifier.tflite` to `assets/models/`
 2. User must explicitly enable AI features in settings
 
-### 3. ActivityPub Client (`fediverse/`)
+### 3. Quest Verifier Service (`QuestVerifier.kt`)
+
+**Purpose:** Combine TF Lite image verification with GPS proximity and timestamp validation
+
+**Features:**
+- **GPS Validation**: Checks user is within 50m of quest location
+- **Timestamp Validation**: Ensures proof submitted within 5-minute window
+- **Image Verification**: Uses TF Lite (or stub mode) for image classification
+- **Confidence Scoring**: Returns confidence score (0.0 - 1.0) for verification
+- **XP Award Calculation**: Awards XP based on verification success and confidence
+
+**Usage:**
+```kotlin
+// Initialize during app startup
+QuestVerifier.initialize(context)
+
+// Verify quest proof
+val result = QuestVerifier.verify(
+    questId = "tree_cleanup_001",
+    image = capturedBitmap,
+    userLocation = currentLocation,
+    questLocation = quest.location,
+    questTimestamp = quest.timestamp,
+    xpReward = 100
+)
+
+if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
+    // Success - award XP
+    playerProfile.addXP(result.xpAward)
+} else {
+    // Failed - show retry dialog
+    showRetryDialog("Proof not verified")
+}
+```
+
+**Offline-First:** All verification runs locally on device. No network required.
+
+### 4. ActivityPub Client (`fediverse/`)
 
 **Purpose:** Share quest completions to decentralized social networks
 
@@ -96,7 +134,7 @@ app/src/main/java/org/fediquest/
 - Currently logs actions instead of making real HTTP requests
 - Full implementation would require HTTP Signatures library
 
-### 4. Companion Evolution System (`companion/`)
+### 5. Companion Evolution System (`companion/`)
 
 **State Machine:**
 ```
@@ -129,6 +167,33 @@ val verifier = FediQuestApp.getImageVerifier()
 verifier.initialize() // Loads model or enters stub mode
 val result = verifier.verifyImage(bitmap, "tree")
 if (result.isStubMode) { /* Handle gracefully */ }
+```
+
+### Quest Verification
+```kotlin
+// Initialize during app startup
+QuestVerifier.initialize(context)
+
+// Submit quest proof with image + GPS + timestamp validation
+lifecycleScope.launch(Dispatchers.IO) {
+    val result = QuestVerifier.verify(
+        questId = questId,
+        image = capturedBitmap,
+        userLocation = currentLocation,
+        questLocation = quest.location,
+        questTimestamp = quest.timestamp,
+        xpReward = 100
+    )
+    
+    withContext(Dispatchers.Main) {
+        if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
+            playerProfile.addXP(result.xpAward)
+            showSuccessDialog(result.xpAward)
+        } else {
+            showRetryDialog("Proof not verified")
+        }
+    }
+}
 ```
 
 ### ActivityPub (Opt-In)
