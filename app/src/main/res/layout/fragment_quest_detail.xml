@@ -433,6 +433,17 @@
                 android:visibility="gone"
                 style="@style/Widget.MaterialComponents.Button" />
 
+            <!-- Capture Proof Button (Camera Integration) -->
+            <Button
+                android:id="@+id/btn_capture_proof"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📸 Capture Proof"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"
+                android:drawablePadding="8dp"
+                style="@style/Widget.MaterialComponents.Button" />
+
             <Button
                 android:id="@+id/btn_cancel_quest"
                 android:layout_width="match_parent"

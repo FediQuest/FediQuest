@@ -7,7 +7,7 @@ FediQuest is an offline-first AR quest app with opt-in AI and Fediverse features
 ## Core Principles
 
 1. **Offline-First**: All core functionality works without internet connectivity
-2. **Opt-In AI/ML**: TensorFlow Lite image verification is disabled by default (stub mode)
+2. **Opt-In AI/ML**: TensorFlow Lite image verification runs in stub mode when no model is present
 3. **Opt-In Fediverse**: ActivityPub social features require explicit user configuration
 4. **Local Storage**: Room database stores all quests, XP, and companion data locally
 
@@ -19,8 +19,7 @@ app/src/main/java/org/fediquest/
 │   ├── entity/                    # Database entities
 │   │   ├── QuestEntity.kt         # Quest data model with QuestType enum
 │   │   ├── PlayerStateEntity.kt   # Player state + companion evolution stage
-│   │   └── PlayerXpEntity.kt      # Legacy XP tracking (deprecated)
-│   ├── dao/                       # Data Access Objects
+│   └── dao/                       # Data Access Objects
 │   │   ├── QuestDao.kt            # Quest CRUD operations
 │   │   └── PlayerDao.kt           # Player state operations
 │   ├── repository/                # Repository Layer
@@ -49,8 +48,11 @@ app/src/main/java/org/fediquest/
 ├── FediQuestApp.kt                # Application class
 ├── MainActivity.kt                # Main UI activity + CameraX integration
 ├── PlayerProfile.kt               # Player progression model
-├── QuestVerifier.kt               # Quest proof verification service
+├── QuestVerifier.kt               # Real TF Lite verification + GPS + timestamp
 └── SpawnFetcher.kt                # Quest spawn fetching
+
+app/src/main/assets/
+└── quest_classifier.tflite        # TF Lite model (downloaded or stub)
 ```
 
 ## Components
@@ -76,7 +78,7 @@ dependencies {
 - `QuestEntity`: Stores quest data with typed enum
   ```kotlin
   enum class QuestType { SOCIAL, ECOLOGICAL, CREATIVE }
-  
+
   data class QuestEntity(
       @PrimaryKey val id: String,
       val title: String,
@@ -88,12 +90,12 @@ dependencies {
       val xpReward: Int,
       val imageUrl: String?,
       val isCompleted: Boolean = false,
-      val createdAt: Long,
-      val fediverseSynced: Boolean = false // For ActivityPub queue
+      val createdAt: Long = System.currentTimeMillis(),
+      val fediverseSynced: Boolean = false
   )
   ```
 
-- `PlayerStateEntity`: Tracks player state and companion evolution
+- `PlayerStateEntity`: Tracks player progression
   ```kotlin
   data class PlayerStateEntity(
       @PrimaryKey val userId: String = "local_player",
@@ -108,61 +110,39 @@ dependencies {
 
 **DAOs:**
 
-- `QuestDao`: Async operations for quests
-  - `getActiveQuests(): Flow<List<QuestEntity>>` - Stream of incomplete quests
-  - `getQuestById(questId: String): QuestEntity?` - Get specific quest
-  - `insertQuest(quest: QuestEntity)` - Add/update quest
-  - `markQuestCompleted(questId: String)` - Mark as done
-  - `getUnsyncedCompletions(): List<QuestEntity>` - Get quests pending Fediverse sync
+- `QuestDao`: Async DAO with Flow support
+  - `getActiveQuests()`: Flow<List<QuestEntity>>
+  - `getQuestById(questId)`: QuestEntity?
+  - `insertQuest(quest)`: suspend
+  - `markQuestCompleted(questId)`: suspend
+  - `getUnsyncedCompletions()`: List<QuestEntity> (for ActivityPub queue)
 
 - `PlayerDao`: Player state operations
-  - `getPlayerState(userId: String): Flow<PlayerStateEntity?>` - Stream player state
-  - `addXP(userId: String, amount: Int)` - Add XP
-  - `updateCompanionStage(userId: String, stage: Int)` - Update evolution
-  - `getTopPlayers(): Flow<List<PlayerStateEntity>>` - Local leaderboard
+  - `getPlayerState()`: Flow<PlayerStateEntity>
+  - `updateXP(xp)`: suspend
+  - `updateLevel(level)`: suspend
+  - `updateCompanionStage(stage)`: suspend
 
 **Repositories:**
 
-- `QuestRepository`: Single source of truth for quest data
-  - Abstracts DAO operations
-  - Handles completion logic
-  - Manages Fediverse sync queue
-  
+- `QuestRepository`: Single source of truth for quests
+  - `activeQuests`: Flow<List<QuestEntity>>
+  - `completeQuest(questId)`: Persists completion, triggers XP calculation
+  - `syncToFediverse(questId)`: Posts to ActivityPub if opted-in
+
 - `PlayerRepository`: Single source of truth for player state
-  - XP management
-  - Level updates
-  - Companion evolution tracking
+  - `addXP(amount)`: Updates XP, checks level-up, triggers companion evolution
+  - `playerState`: Flow<PlayerStateEntity>
+
+### 2. TF Lite Image Verification (`QuestVerifier.kt`)
 
 **Features:**
-- Offline-first storage
-- Automatic caching with sync timestamps
-- Coroutines + Flow for reactive UI updates
-- Typed quest categories via `QuestType` enum
-- Fediverse sync tracking via `fediverseSynced` flag
-
-### 2. TF Lite Image Verifier (`ml/tflite/`)
-
-**Purpose:** Verify quest completion photos using on-device ML
-
-**Stub Mode:** When no `.tflite` model is present:
-- Returns success with `isStubMode = true`
-- App functions normally without AI verification
-- No network calls or external dependencies
-
-**Opt-In:** To enable AI verification:
-1. Add `quest_verifier.tflite` to `assets/models/`
-2. User must explicitly enable AI features in settings
-
-### 3. Quest Verifier Service (`QuestVerifier.kt`)
-
-**Purpose:** Combine TF Lite image verification with GPS proximity and timestamp validation
-
-**Features:**
-- **GPS Validation**: Checks user is within 50m of quest location
-- **Timestamp Validation**: Ensures proof submitted within 5-minute window
-- **Image Verification**: Uses TF Lite (or stub mode) for image classification
-- **Confidence Scoring**: Returns confidence score (0.0 - 1.0) for verification
-- **XP Award Calculation**: Awards XP based on verification success and confidence
+- Real TF Lite model loading from assets
+- Automatic fallback to stub mode if model missing or < 1MB
+- GPS proximity validation (within 50m)
+- Timestamp validation (within 5 minutes)
+- Confidence threshold (≥ 0.75 for AI mode)
+- XP calculation scaled by confidence
 
 **Usage:**
 ```kotlin
@@ -171,133 +151,147 @@ QuestVerifier.initialize(context)
 
 // Verify quest proof
 val result = QuestVerifier.verify(
-    questId = "tree_cleanup_001",
+    questId = "cleanup_001",
     image = capturedBitmap,
     userLocation = currentLocation,
-    questLocation = quest.location,
-    questTimestamp = quest.timestamp,
-    xpReward = 100
+    questLocation = questLocation,
+    questTimestamp = quest.createdAt,
+    xpReward = quest.xpReward
 )
 
-if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
-    // Success - award XP
-    playerProfile.addXP(result.xpAward)
+if (result.confidence >= 0.75f && result.gpsValid && result.timestampValid) {
+    // Success: Award XP
+    playerRepository.addXP(result.xpAward)
 } else {
-    // Failed - show retry dialog
-    showRetryDialog("Proof not verified")
+    // Failed: Show retry dialog
+}
+
+// Check if running with real AI or stub mode
+if (QuestVerifier.isStubMode()) {
+    Log.d("Demo", "Running in stub mode (no AI model)")
 }
 ```
 
-**Offline-First:** All verification runs locally on device. No network required.
+**Model Download:**
+```bash
+# Place EfficientNet-Lite0 in assets
+mkdir -p app/src/main/assets
+curl -L "https://tfhub.dev/tensorflow/lite-model/efficientnet/lite0/classification/2/default/1?lite-format=tflite" \
+  -o app/src/main/assets/quest_classifier.tflite
+```
 
-### 4. ActivityPub Client (`fediverse/`)
-
-**Purpose:** Share quest completions to decentralized social networks
+### 3. ActivityPub Client (`fediverse/`)
 
 **Disabled by Default:**
-- `isFediverseEnabled()` returns `false` initially
-- User must configure instance URL and authenticate
-- All features check `isFediverseEnabled()` before executing
-
-**Supported Activities:**
-- Quest completion posts
-- Companion evolution announcements
-- Following other players
-
-**STUB Implementation:**
-- Currently logs actions instead of making real HTTP requests
-- Full implementation would require HTTP Signatures library
-
-### 5. Companion Evolution System (`companion/`)
-
-**State Machine:**
-```
-Egg → Hatchling → Young → Adult → Mature → Elder → Legendary
-```
+- `ActivityPubClient.isFediverseEnabled()` returns `false` until user configures
+- All posts are logged instead of sent when disabled
+- Requires explicit user configuration (server URL, credentials)
 
 **Features:**
+- Post quest completions to Mastodon
+- Share companion evolution milestones
+- Decentralized guild support (future)
+
+### 4. Companion Evolution (`companion/`)
+
+**State Machine:**
+- 7 evolution stages: Egg → Baby → Child → Teen → Adult → Elder → Legendary
+- 8 moods: Neutral, Happy, Excited, Sleepy, Hungry, Sad, Angry, Playful
+- Personality traits with XP bonuses
 - Bond level tracking (0-100)
-- Mood system (Happy, Excited, Tired, Sad, etc.)
-- Personality traits affecting bonuses
-- Interaction types (Pet, Feed, Play, Rest)
-- Evolution based on bond level thresholds
 
-**Offline-First:**
-- All companion state stored locally
-- Evolution events logged for optional ActivityPub sharing
+**Interactions:**
+- Pet, Feed, Play, Rest actions affect mood and bond
+- Evolution triggered by XP thresholds + bond level
 
-## Usage Examples
+### 5. CameraX Integration (`MainActivity.kt`)
 
-### Accessing Database
+**Quest Proof Capture:**
 ```kotlin
-val db = FediQuestApp.getDatabase()
-val quests = db.questDao().getAllActiveQuests().collect { ... }
-db.playerXpDao().addXP(playerId, 100)
-```
-
-### Using Image Verifier
-```kotlin
-val verifier = FediQuestApp.getImageVerifier()
-verifier.initialize() // Loads model or enters stub mode
-val result = verifier.verifyImage(bitmap, "tree")
-if (result.isStubMode) { /* Handle gracefully */ }
-```
-
-### Quest Verification
-```kotlin
-// Initialize during app startup
-QuestVerifier.initialize(context)
-
-// Submit quest proof with image + GPS + timestamp validation
-lifecycleScope.launch(Dispatchers.IO) {
-    val result = QuestVerifier.verify(
-        questId = questId,
-        image = capturedBitmap,
-        userLocation = currentLocation,
-        questLocation = quest.location,
-        questTimestamp = quest.timestamp,
-        xpReward = 100
-    )
+private fun captureAndSubmitQuestProof(questId: String, userLocation: Location) {
+    val photoFile = File(externalCacheDir, "${System.currentTimeMillis()}.jpg")
     
-    withContext(Dispatchers.Main) {
-        if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
-            playerProfile.addXP(result.xpAward)
-            showSuccessDialog(result.xpAward)
-        } else {
-            showRetryDialog("Proof not verified")
+    imageCapture?.takePicture(
+        OutputFileOptions.Builder(photoFile).build(),
+        cameraExecutor
+    ) { bitmap ->
+        submitQuestProof(questId, bitmap, userLocation)
+    }
+}
+
+private fun submitQuestProof(questId: String, image: Bitmap, location: Location) {
+    lifecycleScope.launch(Dispatchers.IO) {
+        val quest = questRepository.getQuestById(questId)
+        val result = QuestVerifier.verify(
+            questId = questId,
+            image = image,
+            userLocation = location,
+            questLocation = Location("").apply {
+                latitude = quest.locationLat
+                longitude = quest.locationLng
+            },
+            questTimestamp = quest.createdAt,
+            xpReward = quest.xpReward
+        )
+        
+        withContext(Dispatchers.Main) {
+            if (result.confidence >= 0.75f && result.gpsValid && result.timestampValid) {
+                questRepository.completeQuest(questId)
+                playerRepository.addXP(result.xpAward)
+                showSuccessDialog(result.xpAward)
+            } else {
+                showRetryDialog("Verification failed")
+            }
         }
     }
 }
 ```
 
-### ActivityPub (Opt-In)
-```kotlin
-val client = FediQuestApp.getActivityPubClient()
-if (client.isFediverseEnabled()) {
-    client.postQuestCompletion(questActivity)
-}
+## Demo Flow
+
+1. **App Launch**: Initialize QuestVerifier with TF Lite model (or stub mode)
+2. **Quest Selection**: Display active quests from Room DB
+3. **GPS Validation**: Create demo quest at user's current location
+4. **Capture Proof**: User taps "📸 Capture Proof" button in QuestDetailFragment
+5. **Verification**: 
+   - TF Lite classifies image (or stub mode simulates confidence)
+   - GPS distance checked (≤ 50m)
+   - Timestamp validated (≤ 5 min)
+6. **Success**: 
+   - Quest marked completed in Room DB
+   - XP awarded to player
+   - Companion evolution check triggered
+   - Optional: Queue for Fediverse sync
+7. **Failure**: Show retry dialog with reason
+
+## Build & Run
+
+```bash
+# Sync dependencies
+./gradlew sync
+
+# Download TF Lite model (optional, will use stub mode if missing)
+curl -L "https://tfhub.dev/tensorflow/lite-model/efficientnet/lite0/classification/2/default/1?lite-format=tflite" \
+  -o app/src/main/assets/quest_classifier.tflite
+
+# Build debug APK
+./gradlew assembleDebug
+
+# Install on device
+adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### Companion Management
-```kotlin
-val manager = FediQuestApp.getCompanionManager()
-val companion = manager.getOrCreateCompanion("bee", "Busy Bee", "🐝")
-manager.setActiveCompanion("bee")
-manager.interactWithCompanion(InteractionType.PLAY)
-```
+## Testing Offline-First
 
-## Configuration
+1. Enable airplane mode
+2. Launch app → Quests load from Room DB
+3. Complete quest → Verification runs locally
+4. XP awarded → Companion evolves offline
+5. Disable airplane mode → Optional Fediverse sync
 
-All feature flags are in `Config.kt`:
-- Server URLs (local development defaults)
-- Quest types and rewards
-- Companion definitions
-- Level progression settings
+## Future Enhancements
 
-## Next Steps
-
-1. **Database Migration**: Add proper migration strategy for production
-2. **TF Lite Model**: Train and add quest verification model
-3. **ActivityPub**: Implement full HTTP Signatures for Mastodon compatibility
-4. **Companion Persistence**: Save companion state to Room database
-5. **UI Integration**: Connect components to activities/fragments
+- [ ] **GPS→AR Conversion**: GeoAnchor utility for ARCore placement
+- [ ] **LLM Quest Generator**: Dynamic quest creation with location context
+- [ ] **WorkManager**: Background Fediverse sync queue
+- [ ] **Multiplayer**: Decentralized guilds via ActivityPub
