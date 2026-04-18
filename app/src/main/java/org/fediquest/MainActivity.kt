@@ -4,12 +4,27 @@ package org.fediquest
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageProxy
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Scale
 import android.view.MotionEvent
 import android.widget.FrameLayout
+import android.graphics.Bitmap
+import android.location.Location
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * Main activity for FediQuest - Native AR First Approach
@@ -35,6 +50,13 @@ class MainActivity : AppCompatActivity() {
     
     // Root layout container
     private lateinit var rootLayout: FrameLayout
+    
+    // CameraX components for quest proof capture
+    private var imageCapture: ImageCapture? = null
+    private lateinit var cameraExecutor: ExecutorService
+    
+    // Current active quest ID (for proof submission)
+    private var currentQuestId: String? = null
 
     companion object {
         private const val TAG = "FediQuest"
@@ -47,6 +69,9 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize player profile
         initializePlayer()
+        
+        // Initialize QuestVerifier
+        QuestVerifier.initialize(this)
 
         // Create root layout container
         rootLayout = FrameLayout(this).apply {
@@ -61,6 +86,9 @@ class MainActivity : AppCompatActivity() {
         // Initialize AR scene view
         arSceneView = ArSceneView(this)
         rootLayout.addView(arSceneView)
+
+        // Initialize camera executor
+        cameraExecutor = Executors.newSingleThreadExecutor()
 
         // Check which mode to run
         when (currentMode) {
@@ -158,6 +186,101 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Submit quest proof with image verification
+     * Called when user taps "Submit Proof" button
+     */
+    private fun submitQuestProof(questId: String, image: Bitmap, location: Location) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            // Get quest data from database (placeholder values for now)
+            val questLocation = location // TODO: Load actual quest location from Room DB
+            val questTimestamp = System.currentTimeMillis() - 60000 // TODO: Load actual quest timestamp
+            val xpReward = 100 // TODO: Load actual XP reward from quest data
+            
+            val result = QuestVerifier.verify(
+                questId = questId,
+                image = image,
+                userLocation = location,
+                questLocation = questLocation,
+                questTimestamp = questTimestamp,
+                xpReward = xpReward
+            )
+            
+            withContext(Dispatchers.Main) {
+                if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
+                    // Verification successful - award XP
+                    playerProfile?.addXP(result.xpAward)
+                    showSuccessDialog(result.xpAward)
+                    
+                    // TODO: Queue for Fediverse sync if opted-in
+                    Log.d(TAG, "Quest proof verified successfully. XP awarded: ${result.xpAward}")
+                } else {
+                    // Verification failed
+                    val reason = when {
+                        !result.gpsValid -> "GPS location mismatch"
+                        !result.timestampValid -> "Proof submitted outside time window"
+                        result.confidence < 0.85f -> "Image verification failed (confidence: ${result.confidence})"
+                        else -> "Verification failed"
+                    }
+                    showRetryDialog("Proof not verified. $reason. Try again?")
+                    Log.w(TAG, "Quest proof verification failed: $reason")
+                }
+            }
+        }
+    }
+
+    /**
+     * Capture image from camera and submit as quest proof
+     */
+    private fun captureAndSubmitQuestProof(questId: String, userLocation: Location) {
+        currentQuestId = questId
+        
+        val photoFile = File(externalCacheDir, SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis()) + ".jpg")
+        
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        
+        imageCapture?.takePicture(outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
+            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                Log.d(TAG, "Image captured: ${output.savedUri ?: photoFile.absolutePath}")
+                
+                // Load bitmap from file
+                val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
+                
+                // Submit for verification
+                if (bitmap != null) {
+                    submitQuestProof(questId, bitmap, userLocation)
+                } else {
+                    Log.e(TAG, "Failed to load captured image")
+                    showRetryDialog("Failed to process captured image. Try again?")
+                }
+                
+                // Clean up temp file
+                photoFile.delete()
+            }
+
+            override fun onError(exception: ImageCaptureException, imageProxy: ImageProxy?) {
+                Log.e(TAG, "Error capturing image: ${exception.message}", exception)
+                showRetryDialog("Failed to capture image. Try again?")
+            }
+        })
+    }
+
+    /**
+     * Show success dialog after quest completion
+     */
+    private fun showSuccessDialog(xpAward: Int) {
+        Log.d(TAG, "Quest completed successfully! XP awarded: $xpAward")
+        // TODO: Show UI dialog/success animation
+    }
+
+    /**
+     * Show retry dialog after verification failure
+     */
+    private fun showRetryDialog(message: String) {
+        Log.w(TAG, "Showing retry dialog: $message")
+        // TODO: Show UI dialog with retry option
+    }
+
+    /**
      * Share achievement to Fediverse (ActivityPub protocol)
      */
     private fun shareToFediverse(activity: Config.FediverseActivity, details: String) {
@@ -197,6 +320,12 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e(TAG, "Error destroying AR session: ${e.message}", e)
         }
+
+        // Cleanup camera executor
+        cameraExecutor.shutdown()
+        
+        // Cleanup QuestVerifier
+        QuestVerifier.close()
 
         savePlayerProfile()
     }
