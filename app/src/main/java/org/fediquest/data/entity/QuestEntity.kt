@@ -10,32 +10,24 @@ import androidx.room.PrimaryKey
  * Represents a social-ecological quest in the local database.
  * Offline-first: quests are cached locally and synced when online.
  */
+enum class QuestType {
+    SOCIAL,         // Community engagement quests
+    ECOLOGICAL,     // Environmental action quests
+    CREATIVE        // Artistic/creative expression quests
+}
+
 @Entity(tableName = "quests")
 data class QuestEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    
-    val serverId: String?, // Optional ID from remote server
-    
-    val type: String, // planting, recycling, cleanup, etc.
+    @PrimaryKey val id: String,
     val title: String,
     val description: String,
-    val difficulty: String, // easy, medium, hard
-    
-    val latitude: Double,
-    val longitude: Double,
-    val radiusMeters: Float,
-    
+    val type: QuestType, // ENUM: SOCIAL, ECOLOGICAL, CREATIVE
+    val locationLat: Double,
+    val locationLng: Double,
+    val radiusMeters: Float = 50f,
     val xpReward: Int,
-    val coinReward: Int,
-    
-    val isActive: Boolean = true,
+    val imageUrl: String?,
     val isCompleted: Boolean = false,
-    val completionCount: Int = 0,
-    
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
-    val lastSyncedAt: Long? = null,
-    
-    val metadata: String? = null // JSON string for additional data
+    val fediverseSynced: Boolean = false // For ActivityPub queue
 )

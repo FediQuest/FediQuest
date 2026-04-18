@@ -9,9 +9,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.fediquest.data.dao.PlayerXpDao
+import org.fediquest.data.dao.PlayerDao
 import org.fediquest.data.dao.QuestDao
-import org.fediquest.data.entity.PlayerXpEntity
+import org.fediquest.data.entity.PlayerStateEntity
 import org.fediquest.data.entity.QuestEntity
 
 /**
@@ -23,7 +23,7 @@ import org.fediquest.data.entity.QuestEntity
 @Database(
     entities = [
         QuestEntity::class,
-        PlayerXpEntity::class
+        PlayerStateEntity::class
     ],
     version = 1,
     exportSchema = true
@@ -31,7 +31,7 @@ import org.fediquest.data.entity.QuestEntity
 abstract class AppDatabase : RoomDatabase() {
     
     abstract fun questDao(): QuestDao
-    abstract fun playerXpDao(): PlayerXpDao
+    abstract fun playerDao(): PlayerDao
     
     companion object {
         private const val DATABASE_NAME = "fediquest_db"
@@ -68,8 +68,10 @@ abstract class AppDatabase : RoomDatabase() {
                 super.onCreate(db)
                 instance?.let { database ->
                     CoroutineScope(Dispatchers.IO).launch {
-                        // Pre-populate with default data if needed
-                        // Example: Add starter quests or tutorial data
+                        // Pre-populate with default player state
+                        database.playerDao().insertOrReplace(
+                            PlayerStateEntity(userId = "local_player")
+                        )
                     }
                 }
             }

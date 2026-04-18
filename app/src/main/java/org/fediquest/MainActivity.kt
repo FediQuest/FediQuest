@@ -191,10 +191,26 @@ class MainActivity : AppCompatActivity() {
      */
     private fun submitQuestProof(questId: String, image: Bitmap, location: Location) {
         lifecycleScope.launch(Dispatchers.IO) {
-            // Get quest data from database (placeholder values for now)
-            val questLocation = location // TODO: Load actual quest location from Room DB
-            val questTimestamp = System.currentTimeMillis() - 60000 // TODO: Load actual quest timestamp
-            val xpReward = 100 // TODO: Load actual XP reward from quest data
+            // Get database instances
+            val database = org.fediquest.data.database.AppDatabase.getInstance(this@MainActivity)
+            val questRepository = org.fediquest.data.repository.QuestRepository(database.questDao())
+            val playerRepository = org.fediquest.data.repository.PlayerRepository(database.playerDao())
+            
+            // Get quest data from database
+            val quest = questRepository.getQuestById(questId)
+            if (quest == null) {
+                withContext(Dispatchers.Main) {
+                    showRetryDialog("Quest not found. Please try again.")
+                }
+                return@launch
+            }
+            
+            val questLocation = android.location.Location("").apply {
+                latitude = quest.locationLat
+                longitude = quest.locationLng
+            }
+            val questTimestamp = quest.createdAt
+            val xpReward = quest.xpReward
             
             val result = QuestVerifier.verify(
                 questId = questId,
@@ -207,12 +223,19 @@ class MainActivity : AppCompatActivity() {
             
             withContext(Dispatchers.Main) {
                 if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
-                    // Verification successful - award XP
-                    playerProfile?.addXP(result.xpAward)
-                    showSuccessDialog(result.xpAward)
-                    
-                    // TODO: Queue for Fediverse sync if opted-in
-                    Log.d(TAG, "Quest proof verified successfully. XP awarded: ${result.xpAward}")
+                    // Verification successful - persist to Room DB and award XP
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        questRepository.completeQuest(questId) // Persists completion
+                        playerRepository.addXP(amount = result.xpAward) // Updates level/companion
+                        
+                        withContext(Dispatchers.Main) {
+                            playerProfile?.addXP(result.xpAward)
+                            showSuccessDialog(result.xpAward)
+                            
+                            // TODO: Queue for Fediverse sync if opted-in
+                            Log.d(TAG, "Quest proof verified successfully. XP awarded: ${result.xpAward}")
+                        }
+                    }
                 } else {
                     // Verification failed
                     val reason = when {
