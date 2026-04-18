@@ -17,8 +17,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // ARCore required
-        manifestPlaceholders["arcore"] = "required"
+        // ARCore optional (not required for core flows - ARToolKit is primary)
+        // manifestPlaceholders["arcore"] = "optional"
     }
 
     buildTypes {
@@ -93,9 +93,11 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
 
-    // ARCore + SceneView (OSS Sceneform)
-    implementation("io.github.sceneview:arsceneview:0.10.0")
-    implementation("io.github.sceneview:sceneview:0.10.0")
+    // ARCore + SceneView (OSS Sceneform) - OPTIONAL alternative to ARToolKit
+    // Note: ARCore is NOT required for core flows; ARToolKit is primary
+    // Uncomment only if implementing ARCore alternative
+    // implementation("io.github.sceneview:arsceneview:0.10.0")
+    // implementation("io.github.sceneview:sceneview:0.10.0")
 
     // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
@@ -109,8 +111,10 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Location
-    implementation("com.google.android.gms:play-services-location:21.1.0")
+    // Location (FOSS alternative to Google Play Services)
+    // Note: Using Android LocationManager for core GPS functionality
+    // play-services-location is optional for enhanced accuracy only
+    // implementation("com.google.android.gms:play-services-location:21.1.0")
 
     // Image loading
     implementation("io.coil-kt:coil:2.5.0")
