@@ -1,138 +1,131 @@
 # FediQuest Native Android Integration Guide
 
-This document covers integrating native AR libraries (ARToolKit primary, ARCore alternative) into the FediQuest Android app. This is the **primary** flow for the FediQuest prototype.
+This document covers integrating **SceneView** (open-source Sceneform fork) into the FediQuest Android app. This is the **primary** flow for the FediQuest prototype.
 
 ## Architecture Overview
 
-The native Android flow is the **primary** demo for this PR. The app defaults to native AR mode using ARToolKit.
+The native Android flow is the **primary** demo for this PR. The app defaults to native AR mode using SceneView.
 
 ```
 app/
 ├── src/main/
 │   ├── java/org/fediquest/
-│   │   ├── MainActivity.kt      # Native AR entry point
+│   │   ├── MainActivity.kt      # Native AR entry point (SceneView)
 │   │   ├── SpawnFetcher.kt      # ETag-based spawn data fetching
 │   │   └── Config.kt            # App constants
-│   ├── jniLibs/                  # Native .so libraries (NOT included)
-│   │   ├── arm64-v8a/
-│   │   └── armeabi-v7a/
-│   └── assets/                   # Native assets/models
-├── CMakeLists.txt               # Native build config
+│   ├── assets/                   # 3D models (glTF/GLB)
+│   └── AndroidManifest.xml      # App permissions
+├── build.gradle.kts             # Gradle dependencies (SceneView included)
 └── README_NATIVE.md             # This file
 ```
 
-## ARToolKit Integration (Primary Native Option)
+## SceneView Integration (Primary Native Option)
 
-### Download ARToolKit
+### What is SceneView?
 
-ARToolKit is open-source and FOSS-compatible:
+**SceneView** is an open-source, actively maintained AR library based on Google's Sceneform. It provides a modern, Kotlin-first API for building AR experiences on Android.
 
-1. **GitHub**: https://github.com/artoolkitx/artoolkit5
-2. **Prebuilt binaries**: Check releases or build from source
-3. **License**: LGPL v3 (compatible with FOSS projects)
+- **GitHub**: https://github.com/SceneView/sceneview
+- **License**: Apache 2.0 (FOSS-friendly)
+- **Status**: Actively maintained with recent updates
+- **Dependencies**: Pure Kotlin/Java - no NDK or manual .so files required
 
-### Building ARToolKit from Source
+### Benefits over ARToolKit
 
-```bash
-# Clone ARToolKit
-git clone https://github.com/artoolkitx/artoolkit5.git
-cd artoolkit5
+| Feature | SceneView | ARToolKit |
+|---------|-----------|-----------|
+| Maintenance | ✅ Active (2024+) | ❌ Inactive |
+| Setup | ✅ Gradle dependency | ❌ Manual .so files |
+| NDK Required | ❌ No | ✅ Yes |
+| License | ✅ Apache 2.0 | LGPL v3 |
+| glTF Support | ✅ Built-in | ⚠️ Manual |
+| ARCore | ✅ Integrated | ❌ None |
 
-# Configure with NDK
-mkdir build && cd build
-cmake .. \
-  -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
-  -DANDROID_ABI="arm64-v8a" \
-  -DANDROID_PLATFORM=android-24
+### Adding SceneView Dependency
 
-# Build
-make -j4
-
-# Copy .so files to FediQuest project
-cp libAR*.so ../../fediquest/app/src/main/jniLibs/arm64-v8a/
-```
-
-### Placing ARToolKit Libraries
-
-After building or downloading:
-
-```
-app/src/main/jniLibs/
-├── arm64-v8a/
-│   ├── libAR.so
-│   ├── libARw.so
-│   └── libglog.so
-└── armeabi-v7a/
-    ├── libAR.so
-    ├── libARw.so
-    └── libglog.so
-```
-
-**Note**: These `.so` files are NOT included in the repository (>500MB limit).
-
-### CMakeLists.txt Configuration
-
-See `app/CMakeLists.txt` for native build configuration snippet.
-
-## ARCore Integration (Alternative)
-
-ARCore is Google's AR platform. It's included as an **optional alternative** but NOT required for core functionality.
-
-### Adding ARCore Dependency
-
-In `app/build.gradle.kts`:
+SceneView is already included in `app/build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    // Optional ARCore support
-    implementation("com.google.ar:core:1.41.0")
-    implementation("com.google.ar.sceneform:core:1.17.1")
+    // SceneView for AR rendering (primary AR engine)
+    implementation("io.github.sceneview:arsceneview:0.10.0")
+    implementation("io.github.sceneview:sceneview:0.10.0")
 }
 ```
 
-### ARCore Feature Detection
+**No additional setup required!** Gradle will download all necessary dependencies automatically.
 
-Check ARCore availability at runtime:
+### Basic Usage Example
+
+See `MainActivity.kt` for complete implementation:
 
 ```kotlin
-val availability = ArCoreApk.getInstance().checkAvailability(context)
-when {
-    availability.isTransient -> Retry later
-    availability.isSupported -> Proceed with ARCore
-    else -> Fall back to ARToolKit
+// Initialize SceneView
+private lateinit var arSceneView: ArSceneView
+
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    
+    arSceneView = ArSceneView(this)
+    setContentView(arSceneView)
+    
+    // Configure AR session
+    arSceneView.arSceneView.session.apply {
+        config.depthMode = when {
+            isDepthModeSupported(io.github.sceneview.ar.session.DepthMode.AUTOMATIC) -> 
+                io.github.sceneview.ar.session.DepthMode.AUTOMATIC
+            else -> io.github.sceneview.ar.session.DepthMode.DISABLED
+        }
+    }
+    
+    // Handle tap to place objects
+    arSceneView.setOnTouchListener { _, event ->
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val hitResult = arSceneView.arSceneView.hitTest(event.x, event.y).firstOrNull()
+            hitResult?.let { hit ->
+                // Place 3D model at hit position
+                val modelNode = ModelNode().apply {
+                    position = hit.position
+                    scale = Vector3(0.5f, 0.5f, 0.5f)
+                    loadModelGlbAsync("models/tree.glb") {
+                        Log.d(TAG, "Model loaded successfully")
+                    }
+                }
+                arSceneView.arSceneView.scene.addChild(modelNode)
+            }
+        }
+        true
+    }
+}
+
+override fun onResume() {
+    super.onResume()
+    arSceneView.onResume()
+}
+
+override fun onPause() {
+    super.onPause()
+    arSceneView.onPause()
+}
+
+override fun onDestroy() {
+    super.onDestroy()
+    arSceneView.onDestroy()
 }
 ```
+
+## ARCore Integration (Alternative)
+
+**Note**: SceneView already includes ARCore support internally. This section is for reference only - no additional ARCore setup is needed when using SceneView.
+
+ARCore is Google's AR platform that SceneView uses under the hood. It's optional but recommended for the best AR experience.
 
 ### DeGoogle Note
 
 ARCore requires Google Play Services on most devices. For a fully deGoogled experience:
-- Use ARToolKit instead (primary option)
-- ARCore is optional only and not required for core flows
-
-## NDK Setup
-
-### Prerequisites
-
-- Android NDK r25c or newer
-- CMake 3.22+
-- Ninja build system
-
-### Installing NDK
-
-Via Android Studio SDK Manager:
-1. Open SDK Manager
-2. Go to "SDK Tools" tab
-3. Check "NDK (Side by side)"
-4. Install version 25.x or newer
-
-Or download manually: https://developer.android.com/ndk/downloads
-
-### Environment Variables
-
-```bash
-export ANDROID_HOME=$HOME/Android/Sdk
-export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
-```
+- SceneView provides fallbacks for devices without ARCore
+- Basic AR features work without full ARCore support
+- Consider using OpenGLES-based rendering for fully FOSS experience
 
 ## Building Native APK Locally
 
@@ -141,7 +134,7 @@ export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 ```bash
 # Clean caches first (documented commands, no scripts)
 rm -rf ~/.gradle/caches
-rm -rf app/build app/.gradle app/.externalNativeBuild app/.cxx
+rm -rf app/build app/.gradle
 
 # Build debug APK
 cd app
@@ -166,10 +159,9 @@ ls -lh build/outputs/apk/debug/app-debug.apk
 To ensure reproducible builds:
 
 1. Always clean caches before building (see above commands)
-2. Use consistent NDK version (r25c recommended)
-3. Use consistent Gradle version (specified in gradle wrapper)
-4. Document your build environment (OS, SDK versions, etc.)
-5. Verify ARToolKit .so files match target ABI
+2. Use consistent Gradle version (specified in gradle wrapper)
+3. Document your build environment (OS, SDK versions, etc.)
+4. No NDK or .so files required with SceneView!
 
 ## Native Assets Placement
 
@@ -189,16 +181,7 @@ app/src/main/assets/models/
 
 Update `Config.kt` to reference these paths.
 
-### Marker Files (ARToolKit)
-
-For marker-based AR:
-
-```
-app/src/main/assets/markers/
-├── marker1.dat
-├── marker2.dat
-└── patterns.xml
-```
+SceneView supports glTF/GLB models natively - no conversion required!
 
 ## GPS Integration (Native)
 

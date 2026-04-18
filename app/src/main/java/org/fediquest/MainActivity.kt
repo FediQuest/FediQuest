@@ -4,12 +4,16 @@ package org.fediquest
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import io.github.sceneview.ArSceneView
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberModelNode
+import android.view.MotionEvent
 
 /**
  * Main activity for FediQuest - Native AR First Approach
  * 
  * This activity serves as the entry point for the FediQuest native Android app.
- * It defaults to native AR mode using ARToolKit as the primary option.
+ * It defaults to native AR mode using SceneView (open-source Sceneform fork) as the primary AR engine.
  * 
  * FediQuest encourages people to:
  * - Go outside and explore their environment
@@ -22,23 +26,26 @@ import androidx.appcompat.app.AppCompatActivity
  * - Level upgrades and titles
  * 
  * AR Mode Selection:
- * - ARTOOLKIT (default): Native ARToolKit integration (requires .so files)
- * - ARCORE (optional): Native ARCore integration (requires Google Play Services)
+ * - SCENEVIEW (default): Open-source Sceneform fork (actively maintained, Apache 2.0)
+ * - ARCORE (optional): Direct ARCore integration (alternative, requires Google deps)
  * 
- * For the AR GPS prototype PR, the app defaults to ARTOOLKIT mode.
+ * For the AR GPS prototype PR, the app defaults to SCENEVIEW mode.
  */
 class MainActivity : AppCompatActivity() {
 
     enum class ARMode {
-        ARTOOLKIT,     // Primary: Native ARToolKit (requires prebuilt .so files)
-        ARCORE         // Optional: Native ARCore (alternative, requires Google deps)
+        SCENEVIEW,     // Primary: SceneView (open-source, actively maintained)
+        ARCORE         // Optional: Direct ARCore (alternative only)
     }
 
-    // Default to native ARToolKit mode
-    private val currentMode = ARMode.ARTOOLKIT
+    // Default to SceneView mode (primary AR engine)
+    private val currentMode = ARMode.SCENEVIEW
     
     // Player profile (in full implementation, load from persistent storage)
     private var playerProfile: PlayerProfile? = null
+    
+    // SceneView for AR rendering
+    private lateinit var arSceneView: ArSceneView
 
     companion object {
         private const val TAG = "FediQuest"
@@ -52,10 +59,14 @@ class MainActivity : AppCompatActivity() {
         // Initialize player profile
         initializePlayer()
         
+        // Initialize AR scene view
+        arSceneView = ArSceneView(this)
+        setContentView(arSceneView)
+        
         // Check which mode to run
         when (currentMode) {
-            ARMode.ARTOOLKIT -> {
-                setupARToolKit()
+            ARMode.SCENEVIEW -> {
+                setupSceneView()
             }
             ARMode.ARCORE -> {
                 setupARCore()
@@ -84,24 +95,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Setup native ARToolKit integration
+     * Setup SceneView integration (Primary AR Engine)
      * 
-     * Requires ARToolKit .so files placed in:
-     * - app/src/main/jniLibs/arm64-v8a/libAR.so
-     * - app/src/main/jniLibs/armeabi-v7a/libAR.so
+     * SceneView is an open-source AR library based on Sceneform.
+     * GitHub: https://github.com/SceneView/sceneview
+     * License: Apache 2.0
      * 
-     * See app/README_NATIVE.md for download/build instructions.
+     * No native library setup required - included as Gradle dependency.
      */
-    private fun setupARToolKit() {
-        Log.d(TAG, "Initializing ARToolKit native AR")
+    private fun setupSceneView() {
+        Log.d(TAG, "Initializing SceneView native AR")
         
-        // TODO: Load native ARToolKit library
-        // System.loadLibrary("AR")
+        // Configure AR session
+        arSceneView.arSceneView.session.apply {
+            // Enable depth occlusion if supported
+            config.depthMode = when {
+                isDepthModeSupported(io.github.sceneview.ar.session.DepthMode.AUTOMATIC) -> 
+                    io.github.sceneview.ar.session.DepthMode.AUTOMATIC
+                else -> io.github.sceneview.ar.session.DepthMode.DISABLED
+            }
+        }
         
-        // TODO: Initialize ARToolKit session
-        // - Set up camera preview
-        // - Load marker patterns
-        // - Configure spawn renderer
+        // Set up tap listener for placing spawn objects
+        arSceneView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                handleTapOnScreen(event.x, event.y)
+                true
+            } else {
+                false
+            }
+        }
         
         // TODO: Fetch spawn data with ETag caching
         // SpawnFetcher.fetchSpawns { spawns ->
@@ -117,8 +140,29 @@ class MainActivity : AppCompatActivity() {
         //     renderCompanion(companion)
         // }
         
-        // Placeholder: Content view will be set by AR surface
-        // setContentView(arSurfaceView)
+        Log.d(TAG, "SceneView initialized successfully")
+    }
+
+    /**
+     * Handle tap on screen to place or interact with spawn objects
+     */
+    private fun handleTapOnScreen(x: Float, y: Float) {
+        // Perform hit test to find surfaces in the real world
+        val hitResult = arSceneView.arSceneView.hitTest(x, y).firstOrNull()
+        
+        hitResult?.let { hit ->
+            Log.d(TAG, "Hit detected at: ${hit.distance}m")
+            
+            // TODO: Place spawn model at hit position
+            // val spawnNode = ModelNode().apply {
+            //     position = hit.position
+            //     scale = Vector3(0.5f, 0.5f, 0.5f)
+            //     loadModelGlbAsync("models/tree.glb") {
+            //         Log.d(TAG, "Model loaded successfully")
+            //     }
+            // }
+            // arSceneView.arSceneView.scene.addChild(spawnNode)
+        }
     }
 
     /**
@@ -137,7 +181,7 @@ class MainActivity : AppCompatActivity() {
         // val availability = ArCoreApk.getInstance().checkAvailability(this)
         // when {
         //     availability.isSupported -> proceedWithARCore()
-        //     else -> fallbackToARToolKit()
+        //     else -> fallbackToSceneView()
         // }
         
         // TODO: Create ARCore session
@@ -181,8 +225,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         Log.d(TAG, "Activity resumed")
         
-        // Resume AR session if active
-        // arSession?.resume()
+        // Resume AR session
+        arSceneView.onResume()
     }
 
     override fun onPause() {
@@ -190,7 +234,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Activity paused")
         
         // Pause AR session to save resources
-        // arSession?.pause()
+        arSceneView.onPause()
     }
 
     override fun onDestroy() {
@@ -198,7 +242,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Activity destroyed")
         
         // Clean up AR resources
-        // arSession?.close()
+        arSceneView.onDestroy()
         
         // Save player profile
         savePlayerProfile()
