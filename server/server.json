@@ -5,11 +5,14 @@
       "latitude": 40.7128,
       "longitude": -74.0060,
       "modelUrl": "models/tree.glb",
+      "etag": "\"v1-abc123\"",
       "metadata": {
         "name": "Eco Tree #1",
-        "description": "Plant a tree in Central Park",
+        "description": "Plant a tree in Central Park. Trees absorb CO2 and provide habitat for wildlife.",
         "type": "planting",
-        "xpReward": 100
+        "xpReward": 100,
+        "companionHint": "🐝 Busy Bee loves helping plant trees!",
+        "environmentalImpact": "1 tree planted = ~48 lbs CO2 absorbed per year"
       }
     },
     {
@@ -17,11 +20,14 @@
       "latitude": 40.7580,
       "longitude": -73.9855,
       "modelUrl": "models/recycle_bin.glb",
+      "etag": "\"v1-def456\"",
       "metadata": {
         "name": "Recycling Station",
-        "description": "Sort recyclables at Times Square",
+        "description": "Sort recyclables at Times Square. Proper recycling reduces landfill waste.",
         "type": "recycling",
-        "xpReward": 75
+        "xpReward": 75,
+        "companionHint": "🦊 Forest Fox appreciates your recycling efforts!",
+        "environmentalImpact": "1 recycling trip = ~5 lbs waste diverted from landfills"
       }
     },
     {
@@ -29,11 +35,14 @@
       "latitude": 40.7061,
       "longitude": -74.0087,
       "modelUrl": "models/cleanup_bag.glb",
+      "etag": "\"v1-ghi789\"",
       "metadata": {
         "name": "Cleanup Zone",
-        "description": "Collect litter at Battery Park",
+        "description": "Collect litter at Battery Park. Keep our parks clean for everyone!",
         "type": "cleanup",
-        "xpReward": 50
+        "xpReward": 50,
+        "companionHint": "🐢 Sea Turtle thanks you for cleaning up!",
+        "environmentalImpact": "1 cleanup event = ~10 lbs trash removed"
       }
     },
     {
@@ -41,11 +50,14 @@
       "latitude": 40.7484,
       "longitude": -73.9857,
       "modelUrl": "models/wildflower.glb",
+      "etag": "\"v1-jkl012\"",
       "metadata": {
         "name": "Wildflower Garden",
-        "description": "Plant native wildflowers near Empire State",
-        "type": "planting",
-        "xpReward": 120
+        "description": "Plant native wildflowers near Empire State. Support local pollinators!",
+        "type": "wildflower",
+        "xpReward": 120,
+        "companionHint": "🐝 Busy Bee is excited about wildflowers!",
+        "environmentalImpact": "100 wildflowers = support for 1000s of bees and butterflies"
       }
     },
     {
@@ -53,11 +65,14 @@
       "latitude": 40.7295,
       "longitude": -73.9965,
       "modelUrl": "models/water_station.glb",
+      "etag": "\"v1-mno345\"",
       "metadata": {
         "name": "Water Conservation Point",
-        "description": "Check water quality at Union Square",
+        "description": "Check water quality at Union Square. Clean water is essential for all life.",
         "type": "water",
-        "xpReward": 90
+        "xpReward": 90,
+        "companionHint": "🐢 Sea Turtle guides you to protect waterways!",
+        "environmentalImpact": "1 water action = ~100 liters water saved/protected"
       }
     },
     {
@@ -65,14 +80,22 @@
       "latitude": 40.7614,
       "longitude": -73.9776,
       "modelUrl": "models/birdhouse.glb",
+      "etag": "\"v1-pqr678\"",
       "metadata": {
         "name": "Wildlife Habitat",
-        "description": "Build a birdhouse in Roosevelt Park",
+        "description": "Build a birdhouse in Roosevelt Park. Provide homes for local birds!",
         "type": "wildlife",
-        "xpReward": 110
+        "xpReward": 110,
+        "companionHint": "🐦 Song Bird wants to help you build habitats!",
+        "environmentalImpact": "1 birdhouse = home for 1 bird family per season"
       }
     }
   ],
   "lastUpdated": "2024-01-15T10:00:00Z",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "gameInfo": {
+    "description": "FediQuest encourages people to go outside, help each other, and do something good for the environment.",
+    "rewards": "Earn XP, unlock avatar skins, discover companions, and track your environmental impact!",
+    "fediverseIntegration": "Share your achievements to any ActivityPub-compatible instance"
+  }
 }

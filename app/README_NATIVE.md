@@ -1,17 +1,19 @@
 # FediQuest Native Android Integration Guide
 
-This document covers integrating native AR libraries (ARToolKit primary, ARCore alternative) into the FediQuest Android app.
+This document covers integrating native AR libraries (ARToolKit primary, ARCore alternative) into the FediQuest Android app. This is the **primary** flow for the FediQuest prototype.
 
 ## Architecture Overview
 
-The native Android flow is **secondary** to the WebAR demo. The app defaults to launching the web demo but includes integration points for native AR.
+The native Android flow is the **primary** demo for this PR. The app defaults to native AR mode using ARToolKit.
 
 ```
 app/
 ├── src/main/
-│   ├── java/com/fediquest/app/
-│   │   └── MainActivity.kt      # Chooses web vs native flow
-│   ├── jniLibs/                  # Native .so libraries (not included)
+│   ├── java/org/fediquest/
+│   │   ├── MainActivity.kt      # Native AR entry point
+│   │   ├── SpawnFetcher.kt      # ETag-based spawn data fetching
+│   │   └── Config.kt            # App constants
+│   ├── jniLibs/                  # Native .so libraries (NOT included)
 │   │   ├── arm64-v8a/
 │   │   └── armeabi-v7a/
 │   └── assets/                   # Native assets/models
@@ -97,37 +99,15 @@ val availability = ArCoreApk.getInstance().checkAvailability(context)
 when {
     availability.isTransient -> Retry later
     availability.isSupported -> Proceed with ARCore
-    else -> Fall back to web demo or ARToolKit
+    else -> Fall back to ARToolKit
 }
 ```
 
 ### DeGoogle Note
 
 ARCore requires Google Play Services on most devices. For a fully deGoogled experience:
-- Use ARToolKit instead
-- Or rely on the WebAR demo (primary flow)
-
-## MainActivity Integration Points
-
-`MainActivity.kt` includes toggles for different AR flows:
-
-```kotlin
-// In MainActivity.kt
-enum class ARMode {
-    WEB_DEMO,      // Default: Launch web view with A-Frame/AR.js
-    ARTOOLKIT,     // Native ARToolKit
-    ARCORE         // Native ARCore (optional)
-}
-
-private val currentMode = ARMode.WEB_DEMO  // Change to switch modes
-```
-
-### Switching to Native Mode
-
-1. Edit `MainActivity.kt`
-2. Change `currentMode` to `ARTOOLKIT` or `ARCORE`
-3. Ensure native libraries are placed in `jniLibs/`
-4. Build APK
+- Use ARToolKit instead (primary option)
+- ARCore is optional only and not required for core flows
 
 ## NDK Setup
 
@@ -156,11 +136,12 @@ export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 
 ## Building Native APK Locally
 
-### Clean Build
+### Clean Build (REQUIRED)
 
 ```bash
-# Clean caches first
-./scripts/clean_caches.sh
+# Clean caches first (documented commands, no scripts)
+rm -rf ~/.gradle/caches
+rm -rf app/build app/.gradle app/.externalNativeBuild app/.cxx
 
 # Build debug APK
 cd app
@@ -180,6 +161,16 @@ ls -lh build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease
 ```
 
+### Reproducible Local Builds
+
+To ensure reproducible builds:
+
+1. Always clean caches before building (see above commands)
+2. Use consistent NDK version (r25c recommended)
+3. Use consistent Gradle version (specified in gradle wrapper)
+4. Document your build environment (OS, SDK versions, etc.)
+5. Verify ARToolKit .so files match target ABI
+
 ## Native Assets Placement
 
 ### 3D Models for Native AR
@@ -190,10 +181,13 @@ Place glTF/GLB models in:
 app/src/main/assets/models/
 ├── tree.glb
 ├── recycle_bin.glb
-└── ...
+├── cleanup_bag.glb
+├── wildflower.glb
+├── water_station.glb
+└── birdhouse.glb
 ```
 
-Update spawn loader to reference these paths.
+Update `Config.kt` to reference these paths.
 
 ### Marker Files (ARToolKit)
 
@@ -208,20 +202,16 @@ app/src/main/assets/markers/
 
 ## GPS Integration (Native)
 
-Use Android's FusedLocationProvider for GPS:
+Use Android's LocationManager or FusedLocationProvider for GPS:
 
 ```kotlin
-// Example location request
-val locationRequest = LocationRequest.Builder(
-    Priority.PRIORITY_HIGH_ACCURACY,
-    10000  // Update interval ms
-).build()
-
-// Request location updates
-locationClient.requestLocationUpdates(
-    locationRequest,
-    locationCallback,
-    Looper.getMainLooper()
+// Example location request using LocationManager
+val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+locationManager.requestLocationUpdates(
+    LocationManager.GPS_PROVIDER,
+    10000,  // Update interval ms
+    0f,     // Minimum distance meters
+    locationCallback
 )
 ```
 
@@ -251,10 +241,10 @@ Add to `AndroidManifest.xml`:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 # Launch app
-adb shell monkey -p com.fediquest.app.debug -c android.intent.category.LAUNCHER 1
+adb shell monkey -p org.fediquest.debug -c android.intent.category.LAUNCHER 1
 
 # View logs
-adb logcat | grep -E "FediQuest|ARToolKit|ARCore"
+adb logcat | grep -E "FediQuest|ARToolKit"
 ```
 
 ### ARCore Compatibility Check
@@ -262,9 +252,7 @@ adb logcat | grep -E "FediQuest|ARToolKit|ARCore"
 Not all devices support ARCore. Check compatibility:
 - https://developers.google.com/ar/devices
 
-For unsupported devices, fall back to:
-1. ARToolKit mode
-2. WebAR demo (default)
+For unsupported devices, use ARToolKit (primary option).
 
 ## Troubleshooting
 
@@ -286,14 +274,14 @@ For unsupported devices, fall back to:
 - Enable location services on device
 - Test on physical device (emulator GPS limited)
 
-### ARCore Session Failed
+### ARToolKit Initialization Failed
 
-**Problem**: ARCore session won't start
+**Problem**: ARToolKit session won't start
 
 **Solution**:
-- Check device compatibility
-- Update Google Play Services
-- Fall back to ARToolKit or WebAR
+- Verify `.so` files are correctly placed
+- Check camera permissions granted
+- Ensure camera hardware is available
 
 ## Performance Considerations
 
@@ -313,7 +301,7 @@ For unsupported devices, fall back to:
 ## License Notes
 
 - ARToolKit: LGPL v3 (ensure compliance if distributing)
-- ARCore: Proprietary (Google terms apply)
-- FediQuest code: FOSS (see project license)
+- ARCore: Proprietary (Google terms apply, optional only)
+- FediQuest code: FOSS (license omitted per request)
 
 Always verify license compatibility before distribution.

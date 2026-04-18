@@ -1,8 +1,8 @@
 # FediQuest AR GPS Prototype - PR Template
 
-## Pull Request: feature/ar-gps-prototype
+## Pull Request: feature/ar-gps-prototype-native-first
 
-This PR implements the FediQuest AR + GPS prototype with A-Frame/AR.js WebAR as the primary demo, plus native alternative flows (ARToolKit, ARCore) and optional Godot project.
+This PR implements the FediQuest AR + GPS prototype with **Android-native-first approach** using ARToolKit as the primary native option. The repo is text-only with no binaries, placeholders and explicit instructions for native dependencies.
 
 ---
 
@@ -10,143 +10,173 @@ This PR implements the FediQuest AR + GPS prototype with A-Frame/AR.js WebAR as 
 
 ### Core Requirements
 
-- [ ] **Web Demo Functional**: A-Frame + AR.js demo runs locally
-- [ ] **GPS Handling**: Permissions handled gracefully with fallback
-- [ ] **Server Config**: `server/server.json` loads with ETag caching
-- [ ] **Map Fallback**: OpenStreetMap + Leaflet works when AR unavailable
-- [ ] **Cache Script**: `scripts/clean_caches.sh` runs successfully
-- [ ] **No Binary Blobs**: No models, .so files, or APKs committed
-- [ ] **Documentation**: All README files complete and accurate
+- [ ] **Native Android Skeleton**: Builds successfully with documented steps
+- [ ] **ARToolKit Integration**: .so file placement documented (placeholders only)
+- [ ] **ETag Handling**: SpawnFetcher.kt demonstrates If-None-Match caching
+- [ ] **Server Config**: `server/server.json` has 6 spawn entries with ETags
 - [ ] **DeGoogle**: No Google dependencies for core functionality
+- [ ] **No Binary Blobs**: No .so, .apk, .glb files committed
+- [ ] **Documentation**: All README files complete and accurate
+- [ ] **Cache Cleaning**: Commands documented (no scripts committed)
 
 ### File Verification
 
-- [ ] `README.md` - Updated with new architecture
-- [ ] `server/server.json` - 6 sample spawn entries
-- [ ] `web/index.html` - Complete A-Frame + AR.js demo
-- [ ] `web/js/spawn-loader.js` - ETag caching, GPS handling
-- [ ] `web/models/README.md` - Model placement instructions
-- [ ] `web/package.json` - npm scripts for dev server
-- [ ] `web/README_WEB.md` - Web demo documentation
+- [ ] `README.md` - Android-native-first documentation
+- [ ] `server/server.json` - 6 sample spawn entries with ETags
 - [ ] `app/README_NATIVE.md` - Native integration guide
 - [ ] `app/CMakeLists.txt` - Native build snippet
-- [ ] `app/src/main/java/.../MainActivity.kt` - Mode toggle stubs
-- [ ] `godot/project.godot` - Godot project config
-- [ ] `godot/scripts/spawn_loader.gd` - GDScript spawn loader
-- [ ] `godot/scripts/geo_utils.gd` - GDScript GPS utilities
-- [ ] `godot/README_GODOT.md` - Godot documentation
-- [ ] `scripts/clean_caches.sh` - Cache cleaning script
+- [ ] `app/src/main/java/org/fediquest/MainActivity.kt` - Native AR default
+- [ ] `app/src/main/java/org/fediquest/SpawnFetcher.kt` - ETag handling
+- [ ] `app/src/main/java/org/fediquest/Config.kt` - Constants & quest types
 - [ ] `.github/PR_TEMPLATE.md` - This file
 
 ---
 
 ## How to Review This PR
 
-### 1. Run Web Demo Locally (Required)
+### 1. Verify File Structure
 
 ```bash
-# Navigate to web directory
-cd web
-
-# Option A: Python (no dependencies)
-python3 -m http.server 8080
-
-# Option B: npm
-npm install
-npm start
-
-# Open browser: http://localhost:8080
+# Check expected files exist
+ls -la README.md
+ls -la server/server.json
+ls -la app/README_NATIVE.md
+ls -la app/CMakeLists.txt
+ls -la app/src/main/java/org/fediquest/
 ```
 
-**Expected behavior:**
-- Page loads with AR camera view
-- GPS permission prompt appears
-- On allow: Shows nearby spawns from `server/server.json`
-- On deny: Shows map fallback option
-- Spawn list displays at bottom with distances
-- Clicking spawns shows metadata panel
+Expected output should show:
+- `MainActivity.kt` - Kotlin stub (native AR default)
+- `SpawnFetcher.kt` - ETag/If-None-Match handling
+- `Config.kt` - Constants and quest type definitions
 
-### 2. Test GPS Spoofing (Desktop Testing)
-
-```
-Chrome DevTools → Sensors → Set location to:
-Latitude:  40.7128
-Longitude: -74.0060
-Refresh page
-```
-
-**Expected:** Spawns appear in list with calculated distances.
-
-### 3. Verify Cache Cleaning
+### 2. Verify No Binary Blobs
 
 ```bash
-# From project root
-./scripts/clean_caches.sh
+# Check for large files (>1MB) that shouldn't be committed
+find . -type f -size +1M \
+  ! -path "./.git/*" \
+  ! -path "./gradle/*"
 
-# Verify directories removed:
-ls -la web/node_modules      # Should not exist
-ls -la app/build             # Should not exist
+# Should NOT find:
+# - .so native libraries
+# - .apk Android packages
+# - .glb/.gltf model files
 ```
 
-### 4. Check DeGoogle Compliance
+### 3. Check DeGoogle Compliance
 
 Review that NO Google services are required for core features:
 
 | Feature | Implementation | Google-Free? |
 |---------|---------------|--------------|
-| Maps | OpenStreetMap + Leaflet | ✅ |
-| GPS | Browser/Device native API | ✅ |
+| Maps | OpenStreetMap (native OSM tiles) | ✅ |
+| GPS | Android LocationManager | ✅ |
 | Auth | None required | ✅ |
 | Analytics | None included | ✅ |
 | Hosting | Any static host | ✅ |
-| AR (Web) | AR.js (FOSS) | ✅ |
-| AR (Native Alt) | ARToolKit (FOSS) | ✅ |
-| AR (Native Opt) | ARCore (optional) | ⚠️ Optional only |
+| AR (Primary) | ARToolKit (FOSS, LGPL v3) | ✅ |
+| AR (Optional) | ARCore (alternative only) | ⚠️ Optional |
 
-### 5. Verify No Binary Blobs
+### 4. Verify ETag Implementation
 
-```bash
-# Check for large files (>1MB)
-find . -type f -size +1M \
-  ! -path "./node_modules/*" \
-  ! -path "./.git/*" \
-  ! -path "./gradle/*"
+Check `app/src/main/java/org/fediquest/SpawnFetcher.kt` for:
+- [ ] `If-None-Match` header usage
+- [ ] `304 Not Modified` response handling
+- [ ] ETag storage and retrieval
+- [ ] Retry/backoff documentation
 
-# Should NOT find:
-# - .glb/.gltf model files
-# - .so native libraries
-# - .apk Android packages
-# - .aab Android bundles
-```
+### 5. Verify Social-Ecological Quest Types
+
+Check `server/server.json` for 6 quest types:
+- [ ] `planting` - Tree planting quests
+- [ ] `recycling` - Recycling station quests
+- [ ] `cleanup` - Litter cleanup quests
+- [ ] `wildflower` - Wildflower garden quests
+- [ ] `water` - Water conservation quests
+- [ ] `wildlife` - Wildlife habitat quests
+
+Each entry should have:
+- Unique ID
+- Latitude/longitude coordinates
+- Model URL (placeholder)
+- ETag field
+- Metadata with name, description, type, xpReward
 
 ---
 
 ## Cache Clean Steps for Reviewers
 
-Before building/testing, clean all caches:
+Before building/testing, clean all caches (documented commands, no scripts):
 
 ```bash
-# Automated (recommended)
-./scripts/clean_caches.sh
+# Gradle cache cleaning (REQUIRED before building)
+rm -rf ~/.gradle/caches
+rm -rf app/build app/.gradle app/.externalNativeBuild app/.cxx
 
-# Manual alternative
-npm cache clean --force
-rm -rf web/node_modules
-rm -rf app/build app/.gradle .gradle
-find . -name "__pycache__" -exec rm -rf {} +
-```
-
-Then rebuild:
-
-```bash
-# Web demo
-cd web
-npm install  # if using npm server
-# OR just use python3 -m http.server 8080
-
-# Native APK (optional)
+# Then rebuild
 cd app
 ./gradlew clean assembleDebug
+```
+
+**Note**: No cache-clean scripts are committed to this repo. Reviewers must run these commands locally as documented.
+
+---
+
+## Building Locally
+
+### Prerequisites
+
+1. Android Studio or command-line SDK tools
+2. Android NDK r25c or newer
+3. CMake 3.22+
+
+### Environment Setup
+
+```bash
+export ANDROID_HOME=$HOME/Android/Sdk
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
+```
+
+### ARToolKit Setup (Required for Full Build)
+
+**Option A: Download Prebuilt**
+
+1. Visit: https://github.com/artoolkitx/artoolkit5/releases
+2. Download Android prebuilt package
+3. Extract and copy `.so` files to:
+   ```
+   app/src/main/jniLibs/arm64-v8a/
+   app/src/main/jniLibs/armeabi-v7a/
+   ```
+
+**Option B: Build from Source**
+
+```bash
+git clone https://github.com/artoolkitx/artoolkit5.git
+cd artoolkit5
+mkdir build && cd build
+cmake .. \
+  -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+  -DANDROID_ABI="arm64-v8a" \
+  -DANDROID_PLATFORM=android-24
+make -j4
+cp libAR*.so ../../fediquest/app/src/main/jniLibs/arm64-v8a/
+```
+
+### Build APK
+
+```bash
+# Clean first (required)
+rm -rf ~/.gradle/caches
+rm -rf app/build app/.gradle app/.externalNativeBuild app/.cxx
+
+# Build debug APK
+cd app
+./gradlew assembleDebug
+
+# Output
+ls -lh build/outputs/apk/debug/app-debug.apk
 ```
 
 ---
@@ -159,33 +189,25 @@ cd app
 ├─────────────────────────────────────────────────────┤
 │                                                     │
 │  ┌─────────────────────────────────────────────┐   │
-│  │  PRIMARY: Web Demo (A-Frame + AR.js)        │   │
-│  │  - Zero install, browser-based              │   │
-│  │  - GPS via browser API                      │   │
-│  │  - OpenStreetMap fallback                   │   │
-│  │  - Files: web/                              │   │
-│  └─────────────────────────────────────────────┘   │
-│                                                     │
-│  ┌─────────────────────────────────────────────┐   │
-│  │  SECONDARY: Native Android                  │   │
-│  │  - ARToolKit (primary native)               │   │
-│  │  - ARCore (optional alternative)            │   │
+│  │  PRIMARY: Native Android (ARToolKit)        │   │
+│  │  - MainActivity.kt (native AR default)      │   │
+│  │  - SpawnFetcher.kt (ETag caching)           │   │
+│  │  - Config.kt (constants, quest types)       │   │
 │  │  - Requires .so files (not included)        │   │
 │  │  - Files: app/                              │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
 │  ┌─────────────────────────────────────────────┐   │
-│  │  OPTIONAL: Godot Project                    │   │
-│  │  - Cross-platform exports                   │   │
-│  │  - GDScript implementation                  │   │
-│  │  - Files: godot/                            │   │
+│  │  OPTIONAL: ARCore Alternative               │   │
+│  │  - Requires Google Play Services            │   │
+│  │  - Not required for core flows              │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
 │  ┌─────────────────────────────────────────────┐   │
 │  │  Server Config                              │   │
 │  │  - server/server.json                       │   │
-│  │  - 6 sample spawns (NYC area)               │   │
-│  │  - ETag caching support                     │   │
+│  │  - 6 social-ecological spawns               │   │
+│  │  - ETag fields for caching                  │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
 └─────────────────────────────────────────────────────┘
@@ -195,47 +217,35 @@ cd app
 
 ## Known Limitations
 
-1. **Models Not Included**: glTF/GLB files must be added separately (see `web/models/README.md`)
-2. **Native .so Files**: ARToolKit libraries must be built/downloaded (see `app/README_NATIVE.md`)
-3. **iOS Support**: Limited; WebAR works but native iOS requires additional work
-4. **AR on Desktop**: WebAR requires webcam; GPS spoofing needed for testing
-5. **Godot Scenes**: Main scene (`main.tscn`) is a placeholder; requires creation
+1. **Native .so Files**: ARToolKit libraries must be built/downloaded separately (see `app/README_NATIVE.md`)
+2. **3D Models**: glTF/GLB files not included; placeholders in `Config.kt`
+3. **iOS Support**: Not included in this PR (Android-native-first)
+4. **Web Demo**: Removed from this PR (focus on native flow)
 
 ---
 
 ## Testing Scenarios
 
-### Scenario 1: First-Time User (Mobile)
+### Scenario 1: Local Build Review
 
-1. Open `http://your-host.com/web/` on mobile
-2. Grant GPS permission
-3. Grant camera permission (for AR)
-4. See nearby spawns in list
-5. Walk toward spawn location
-6. View AR model through camera
+1. Follow build instructions above
+2. Place ARToolKit .so files in jniLibs/
+3. Run `./gradlew assembleDebug`
+4. Verify APK builds without errors
 
-### Scenario 2: Desktop Testing
+### Scenario 2: Code Review (No Build)
 
-1. Run `python3 -m http.server 8080` in `web/`
-2. Open `http://localhost:8080`
-3. Spoof GPS in DevTools
-4. View map fallback mode
-5. Click spawns to see metadata
+1. Review Kotlin stubs in `app/src/main/java/org/fediquest/`
+2. Verify ETag implementation in `SpawnFetcher.kt`
+3. Check quest types in `Config.kt` and `server/server.json`
+4. Confirm DeGoogle compliance
 
-### Scenario 3: GPS Denied
+### Scenario 3: Documentation Review
 
-1. Open web demo
-2. Deny GPS permission
-3. See permission prompt
-4. Click "Use Map Only"
-5. View OpenStreetMap with spawn markers
-
-### Scenario 4: Offline/Cache
-
-1. Load web demo once (caches data)
-2. Go offline
-3. Reload page
-4. Cached spawns should still display
+1. Read `README.md` for setup instructions
+2. Read `app/README_NATIVE.md` for native integration details
+3. Verify cache cleaning commands are documented
+4. Check placeholder paths are clearly marked
 
 ---
 
@@ -243,23 +253,22 @@ cd app
 
 After this PR is merged:
 
-- [ ] Add actual 3D models to `web/models/`
-- [ ] Build/download ARToolKit for native flow
-- [ ] Create Godot main scene
-- [ ] Set up CI/CD for web deployment
+- [ ] Add actual ARToolKit .so files for distribution (separate repo or download)
+- [ ] Create/add 3D models for quest types
+- [ ] Implement full JSON parsing in SpawnFetcher
+- [ ] Add unit tests for ETag caching logic
+- [ ] Set up CI/CD for automated builds
 - [ ] Configure production server.json hosting
-- [ ] Test on multiple devices/browsers
 
 ---
 
 ## References
 
-- [A-Frame Documentation](https://aframe.io/docs/)
-- [AR.js Documentation](https://ar-js-org.github.io/AR.js-Docs/)
-- [Leaflet Documentation](https://leafletjs.com/reference.html)
+- [ARToolKit Documentation](https://artoolkit.org/documentation/)
+- [Android NDK Guide](https://developer.android.com/ndk/guides)
+- [CMake for Android](https://developer.android.com/ndk/guides/cmake)
 - [OpenStreetMap](https://www.openstreetmap.org/)
-- [ARToolKit](https://artoolkit.org/)
-- [Godot Engine](https://godotengine.org/)
+- [HTTP ETag Specification](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
 
 ---
 
