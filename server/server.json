@@ -1,0 +1,78 @@
+{
+  "spawns": [
+    {
+      "id": "spawn_001",
+      "latitude": 40.7128,
+      "longitude": -74.0060,
+      "modelUrl": "models/tree.glb",
+      "metadata": {
+        "name": "Eco Tree #1",
+        "description": "Plant a tree in Central Park",
+        "type": "planting",
+        "xpReward": 100
+      }
+    },
+    {
+      "id": "spawn_002",
+      "latitude": 40.7580,
+      "longitude": -73.9855,
+      "modelUrl": "models/recycle_bin.glb",
+      "metadata": {
+        "name": "Recycling Station",
+        "description": "Sort recyclables at Times Square",
+        "type": "recycling",
+        "xpReward": 75
+      }
+    },
+    {
+      "id": "spawn_003",
+      "latitude": 40.7061,
+      "longitude": -74.0087,
+      "modelUrl": "models/cleanup_bag.glb",
+      "metadata": {
+        "name": "Cleanup Zone",
+        "description": "Collect litter at Battery Park",
+        "type": "cleanup",
+        "xpReward": 50
+      }
+    },
+    {
+      "id": "spawn_004",
+      "latitude": 40.7484,
+      "longitude": -73.9857,
+      "modelUrl": "models/wildflower.glb",
+      "metadata": {
+        "name": "Wildflower Garden",
+        "description": "Plant native wildflowers near Empire State",
+        "type": "planting",
+        "xpReward": 120
+      }
+    },
+    {
+      "id": "spawn_005",
+      "latitude": 40.7295,
+      "longitude": -73.9965,
+      "modelUrl": "models/water_station.glb",
+      "metadata": {
+        "name": "Water Conservation Point",
+        "description": "Check water quality at Union Square",
+        "type": "water",
+        "xpReward": 90
+      }
+    },
+    {
+      "id": "spawn_006",
+      "latitude": 40.7614,
+      "longitude": -73.9776,
+      "modelUrl": "models/birdhouse.glb",
+      "metadata": {
+        "name": "Wildlife Habitat",
+        "description": "Build a birdhouse in Roosevelt Park",
+        "type": "wildlife",
+        "xpReward": 110
+      }
+    }
+  ],
+  "lastUpdated": "2024-01-15T10:00:00Z",
+  "version": "1.0.0"
+}
