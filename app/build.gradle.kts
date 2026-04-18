@@ -17,8 +17,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // ARCore optional (not required for core flows - ARToolKit is primary)
-        // manifestPlaceholders["arcore"] = "optional"
+        // ARCore + SceneView (OSS Sceneform fork) - PRIMARY AR ENGINE
+        // SceneView is an open-source, actively maintained AR library based on Sceneform
+        // GitHub: https://github.com/SceneView/sceneview
+        // License: Apache 2.0 (FOSS-friendly)
+        // Note: SceneView handles ARCore internally, no separate ARCore dependency needed
     }
 
     buildTypes {
@@ -93,11 +96,13 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
 
-    // ARCore + SceneView (OSS Sceneform) - OPTIONAL alternative to ARToolKit
-    // Note: ARCore is NOT required for core flows; ARToolKit is primary
-    // Uncomment only if implementing ARCore alternative
-    // implementation("io.github.sceneview:arsceneview:0.10.0")
-    // implementation("io.github.sceneview:sceneview:0.10.0")
+    // SceneView (OSS Sceneform fork) - PRIMARY AR ENGINE
+    // SceneView is an open-source, actively maintained AR library based on Sceneform
+    // GitHub: https://github.com/SceneView/sceneview
+    // License: Apache 2.0 (FOSS-friendly)
+    // No manual .so file setup required - pure Kotlin/Java library
+    implementation("io.github.sceneview:arsceneview:0.10.0")
+    implementation("io.github.sceneview:sceneview:0.10.0")
 
     // Room Database
     implementation("androidx.room:room-runtime:2.6.1")

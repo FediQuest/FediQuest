@@ -11,7 +11,7 @@ Players earn XP by completing social-ecological quests and unlock **digital good
 - ⭐ Level upgrades and titles
 - 🌍 Environmental impact tracking
 
-This prototype prioritizes an **Android-native-first approach** with ARToolKit as the primary native option, while retaining a minimal, text-only repo with no binaries.
+This prototype prioritizes an **Android-native-first approach** with **SceneView** (open-source Sceneform fork) as the primary AR engine, while retaining a minimal, text-only repo with no binaries.
 
 ## Table of Contents
 
@@ -32,8 +32,8 @@ This prototype prioritizes an **Android-native-first approach** with ARToolKit a
 export ANDROID_HOME=/path/to/android/sdk
 export ANDROID_NDK_HOME=/path/to/android/ndk
 
-# Place ARToolKit .so files in app/src/main/jniLibs/
-# See app/README_NATIVE.md for download/build instructions
+# No external .so files needed - SceneView is included as a Gradle dependency
+# See app/build.gradle.kts for dependencies
 
 # Clean caches first (required before building)
 rm -rf ~/.gradle/caches
@@ -110,8 +110,8 @@ Track your real-world positive impact:
 ```
 FediQuest
 ├── app/                    # Primary: Native Android skeleton
-│   ├── README_NATIVE.md    # ARToolKit/ARCore integration guide
-│   ├── CMakeLists.txt      # Native build configuration
+│   ├── README_NATIVE.md    # SceneView integration guide
+│   ├── CMakeLists.txt      # Native build configuration (optional)
 │   └── src/main/java/org/fediquest/
 │       ├── MainActivity.kt     # Kotlin stub (native AR default)
 │       ├── SpawnFetcher.kt     # ETag/If-None-Match handling
@@ -126,8 +126,8 @@ FediQuest
 
 | Flow | Technology | Priority | Install Required |
 |------|------------|----------|------------------|
-| **Native AR** | ARToolKit | Primary | Android build + .so files |
-| Native AR | ARCore (optional) | Alternative | Android build + Google deps |
+| **Native AR** | SceneView (Sceneform fork) | Primary | Gradle dependency only |
+| Native AR | ARCore (optional) | Alternative | Google deps (optional) |
 | Web Demo | Removed from this PR | N/A | N/A |
 
 ## DeGoogle Checklist
@@ -156,50 +156,45 @@ FediQuest is committed to avoiding proprietary Google services for core features
 ### Prerequisites
 
 - Android Studio or command-line SDK tools
-- Android NDK r25c or newer
-- CMake 3.22+
-- ARToolKit prebuilt libraries (see below)
+- Android SDK 34 (or newer)
+- No NDK required for SceneView (optional only for custom native code)
 
 ### Environment Setup
 
 ```bash
 # Set environment variables
 export ANDROID_HOME=$HOME/Android/Sdk
-export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 
 # Verify installation
 $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list
-$ANDROID_NDK_HOME/ndk-build --version
 ```
 
-### ARToolKit Integration (Primary Native Option)
+### SceneView Integration (Primary Native Option)
 
-**Option A: Download Prebuilt Libraries**
+SceneView is an open-source AR library based on Sceneform, actively maintained and FOSS-friendly.
 
-1. Visit: https://github.com/artoolkitx/artoolkit5/releases
-2. Download the latest Android prebuilt package
-3. Extract and copy `.so` files to `app/src/main/jniLibs/{abi}/`
+**No manual library setup required** - SceneView is included as a Gradle dependency:
 
-**Option B: Build from Source**
-
-```bash
-# Clone ARToolKit
-git clone https://github.com/artoolkitx/artoolkit5.git
-cd artoolkit5
-
-# Configure with NDK
-mkdir build && cd build
-cmake .. \
-  -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
-  -DANDROID_ABI="arm64-v8a" \
-  -DANDROID_PLATFORM=android-24
-
-# Build
-make -j4
-
-# Copy .so files to FediQuest project
-cp libAR*.so ../../fediquest/app/src/main/jniLibs/arm64-v8a/
+```kotlin
+// app/build.gradle.kts
+dependencies {
+    // SceneView for AR rendering (primary AR engine)
+    implementation("io.github.sceneview:arsceneview:0.10.0")
+    implementation("io.github.sceneview:sceneview:0.10.0")
+}
 ```
+
+**Benefits over ARToolKit:**
+- ✅ Actively maintained (recent updates)
+- ✅ No manual .so file management
+- ✅ Pure Kotlin/Java - no NDK required
+- ✅ Apache 2.0 license (FOSS-friendly)
+- ✅ Built-in ARCore support with fallbacks
+- ✅ glTF/GLB model support out of the box
+
+**Resources:**
+- GitHub: https://github.com/SceneView/sceneview
+- Documentation: https://github.com/SceneView/sceneview#readme
 
 ### Building the APK
 
@@ -231,7 +226,7 @@ adb install -r build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease
 ```
 
-See `app/README_NATIVE.md` for detailed native integration instructions.
+See `app/README_NATIVE.md` for detailed SceneView integration instructions.
 
 ## Server Configuration
 
@@ -307,22 +302,6 @@ cd app
 
 ## File Placement Guide
 
-### Native Libraries (Not Included in Repo)
-
-```
-app/src/main/jniLibs/
-├── arm64-v8a/
-│   ├── libAR.so          # ARToolKit core library
-│   ├── libARw.so         # ARToolKit video library
-│   └── libglog.so        # Google logging (if needed)
-└── armeabi-v7a/
-    ├── libAR.so
-    ├── libARw.so
-    └── libglog.so
-```
-
-**These `.so` files are NOT included in the repository** (>500MB limit). Follow instructions in `app/README_NATIVE.md` to download or build them.
-
 ### 3D Models for Quests (Not Included)
 
 ```
@@ -337,12 +316,14 @@ app/src/main/assets/models/
 
 Place your own glTF/GLB models in this directory. Update `Config.kt` with correct paths.
 
+**Note**: SceneView handles model loading automatically - no native library setup required.
+
 ## PR Checklist
 
 Before submitting or reviewing this PR:
 
 - [ ] Native Android skeleton builds successfully
-- [ ] ARToolKit `.so` files placed in `jniLibs/` (or documented as placeholder)
+- [ ] SceneView dependency enabled in `build.gradle.kts`
 - [ ] `server/server.json` has 6 spawn entries with ETags
 - [ ] `SpawnFetcher.kt` demonstrates ETag/If-None-Match handling
 - [ ] `MainActivity.kt` defaults to native AR mode
@@ -356,20 +337,20 @@ Before submitting or reviewing this PR:
 
 This is a FOSS project. Contributions welcome!
 
-- Native Android enhancements (ARToolKit)
+- Native Android enhancements (SceneView)
 - Social-ecological quest implementations
 - Privacy-focused feature additions
 - Documentation improvements
 
 ## Acknowledgments
 
-- [ARToolKit](https://artoolkit.org/) - Native AR library (LGPL v3)
+- [SceneView](https://github.com/SceneView/sceneview) - Open-source AR library (Apache 2.0)
 - [OpenStreetMap](https://www.openstreetmap.org/) - Open map data
-- [Android NDK](https://developer.android.com/ndk) - Native development
+- [Android SDK](https://developer.android.com/) - Android development
 
 ## License Notes
 
-- ARToolKit: LGPL v3 (ensure compliance if distributing)
+- SceneView: Apache 2.0 (FOSS-friendly)
 - ARCore: Proprietary (Google terms apply, optional only)
 - FediQuest code: FOSS (license omitted per request)
 
