@@ -16,6 +16,7 @@ This prototype prioritizes an **Android-native-first approach** with **SceneView
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Setup Script](#setup-script)
 - [Game Features](#game-features)
 - [Architecture Overview](#architecture-overview)
 - [DeGoogle Checklist](#degoogle-checklist)
@@ -26,6 +27,28 @@ This prototype prioritizes an **Android-native-first approach** with **SceneView
 - [PR Checklist](#pr-checklist)
 
 ## Quick Start
+
+### Option 1: Automated Setup (Recommended)
+
+Use the provided setup script to automatically configure and build the project:
+
+```bash
+# Make the script executable
+chmod +x setup.sh
+
+# Run the setup script
+./setup.sh
+```
+
+The script will:
+- Detect your Android SDK location
+- Clean build caches for reproducible builds
+- Create required asset directories
+- Set up the Gradle wrapper
+- Build the debug APK
+- Provide installation instructions
+
+### Option 2: Manual Setup
 
 ```bash
 # Ensure Android SDK/NDK installed
@@ -46,6 +69,39 @@ cd app
 # APK output: app/build/outputs/apk/debug/app-debug.apk
 # Install on device: adb install -r build/outputs/apk/debug/app-debug.apk
 ```
+
+## Setup Script
+
+The `setup.sh` script automates the entire build process:
+
+```bash
+# Make executable and run
+chmod +x setup.sh
+./setup.sh
+```
+
+**What the script does:**
+
+1. **Environment Detection**: Automatically finds Android SDK if ANDROID_HOME is not set
+2. **Cache Cleaning**: Removes Gradle caches for reproducible builds
+3. **Asset Setup**: Creates required directories for 3D models and markers
+4. **Dependency Installation**: Installs required SDK components (if sdkmanager available)
+5. **Build**: Compiles the debug APK with all dependencies
+6. **Guidance**: Provides clear next steps for installation and testing
+
+**Requirements:**
+
+- Java JDK 17 or higher
+- Android SDK (API 34 recommended)
+- Internet connection (for Gradle dependencies)
+
+**Output:**
+
+On success, the script produces:
+- `app/build/outputs/apk/debug/app-debug.apk`
+- Asset directories ready for 3D models
+- Clear instructions for device installation
+
 
 ## Game Features
 
@@ -325,12 +381,12 @@ Before submitting or reviewing this PR:
 - [ ] Native Android skeleton builds successfully
 - [ ] SceneView dependency enabled in `build.gradle.kts`
 - [ ] `server/server.json` has 6 spawn entries with ETags
-- [ ] `SpawnFetcher.kt` demonstrates ETag/If-None-Match handling
+- [ ] `SpawnFetcher.kt` demonstrates ETag/If-None-Match handling with JSON parsing
 - [ ] `MainActivity.kt` defaults to native AR mode
 - [ ] No binary blobs committed (no `.so`, `.apk`, `.glb` files)
 - [ ] README documentation complete
 - [ ] DeGoogle checklist verified (no Google dependencies for core)
-- [ ] Cache cleaning commands documented (no scripts committed)
+- [ ] `setup.sh` script provided for automated builds
 - [ ] All placeholder files have clear placement instructions
 
 ## Contributing

@@ -153,14 +153,32 @@ class SpawnFetcher {
      * In production, use a proper JSON library like kotlinx.serialization or Gson.
      */
     private fun parseSpawnJson(json: String): List<Spawn> {
-        // TODO: Implement proper JSON parsing
-        // Example using kotlinx.serialization:
-        // return Json.decodeFromString<SpawnResponse>(json).spawns
-        
-        // Placeholder: Return empty list
-        Log.w(TAG, "JSON parsing not implemented - returning empty list")
-        return emptyList()
+        return try {
+            val gson = com.google.gson.Gson()
+            val spawnResponse = gson.fromJson(json, SpawnResponse::class.java)
+            spawnResponse?.spawns ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "JSON parsing error: ${e.message}")
+            throw e
+        }
     }
+
+    /**
+     * Data class for server.json response structure
+     */
+    private data class SpawnResponse(
+        val spawns: List<Spawn>,
+        val lastUpdated: String?,
+        val version: String?,
+        val gameInfo: GameInfo?
+    )
+
+    private data class GameInfo(
+        val description: String?,
+        val rewards: String?,
+        val fediverseIntegration: String?
+    )
+
 
     /**
      * Retry with exponential backoff
