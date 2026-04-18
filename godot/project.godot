@@ -1,0 +1,48 @@
+; FediQuest Godot Project Configuration
+; This is an optional cross-platform export option for FediQuest
+
+config_version=5
+
+[application]
+
+config/name="FediQuest"
+run/main_scene="res://scenes/main.tscn"
+app_features="3D, AR, GPS"
+config/description="Open FOSS AR + GPS prototype with Godot cross-platform support"
+
+[autoload]
+
+SpawnLoader="*res://scripts/spawn_loader.gd"
+GeoUtils="*res://scripts/geo_utils.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+window/handheld/orientation="landscape"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="spawns"
+3d_physics/layer_3="player"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+anti_aliasing/quality/msaa_3d=2
+environment/glow_enabled=true
+
+[xr]
+
+xr/openxr/enabled=true
+xr/openxr/hand_tracking=false
+
+[plugins]
+
+godot_ar/enabled=false  ; Optional AR plugin placeholder
