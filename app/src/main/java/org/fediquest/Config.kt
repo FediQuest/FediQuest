@@ -314,9 +314,10 @@ object Config {
     fun calculateLevelFromXP(totalXP: Int): Int {
         var level = 1
         var xpNeeded = BASE_XP_FOR_LEVEL_1
+        var remainingXP = totalXP
         
-        while (totalXP >= xpNeeded && level < LEVEL_TITLES.size) {
-            totalXP -= xpNeeded
+        while (remainingXP >= xpNeeded && level < LEVEL_TITLES.size) {
+            remainingXP -= xpNeeded
             level++
             xpNeeded = xpRequiredForLevel(level)
         }
