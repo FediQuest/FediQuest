@@ -314,17 +314,17 @@ object Config {
     fun calculateLevelFromXP(totalXP: Int): Int {
         var level = 1
         var xpNeeded = BASE_XP_FOR_LEVEL_1
-        var remainingXP = totalXP
-        
+        var remainingXP = totalXP  // ← Create a mutable copy
+    
         while (remainingXP >= xpNeeded && level < LEVEL_TITLES.size) {
-            remainingXP -= xpNeeded
+            remainingXP -= xpNeeded  // ← Modify the mutable copy
             level++
             xpNeeded = xpRequiredForLevel(level)
         }
-        
+    
         return level
     }
-
+    
     // =============================================================================
     // Get model path for quest type
     // =============================================================================
