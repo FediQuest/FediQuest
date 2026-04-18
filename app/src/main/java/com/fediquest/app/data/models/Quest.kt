@@ -60,12 +60,6 @@ enum class QuestStatus {
     EXPIRED
 }
 
-// File: app/src/main/java/com/fediquest/app/data/models/User.kt
-package com.fediquest.app.data.models
-
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
 /**
  * Represents the user's profile and progress.
  */
@@ -84,12 +78,6 @@ data class User(
     val createdAt: Long = System.currentTimeMillis(),
     val lastActiveAt: Long = System.currentTimeMillis()
 )
-
-// File: app/src/main/java/com/fediquest/app/data/models/Avatar.kt
-package com.fediquest.app.data.models
-
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
  * Represents customizable avatar parts.
@@ -112,12 +100,6 @@ enum class AvatarCategory {
     SHOES,
     BACKGROUND
 }
-
-// File: app/src/main/java/com/fediquest/app/data/models/Companion.kt
-package com.fediquest.app.data.models
-
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
  * Represents an eco-companion that evolves with the user.
@@ -147,9 +129,6 @@ enum class CompanionSpecies(val displayName: String, val description: String) {
     SOLAR_LION("Solar Lion", "A lion powered by sunlight")
 }
 
-// File: app/src/main/java/com/fediquest/app/data/models/FediversePost.kt
-package com.fediquest.app.data.models
-
 /**
  * Represents an ActivityPub post for Fediverse integration.
  */
@@ -176,9 +155,6 @@ enum class Visibility {
     FOLLOWERS_ONLY,
     DIRECT
 }
-
-// File: app/src/main/java/com/fediquest/app/data/models/Location.kt
-package com.fediquest.app.data.models
 
 import android.location.Location
 
