@@ -1,16 +1,26 @@
 # FediQuest — Open FOSS AR + GPS Prototype
 
-FediQuest is an open-source augmented reality GPS-based experience platform. This prototype prioritizes a **public browser demo using A-Frame + AR.js (WebAR)** for easy contribution and fast prototyping, while retaining native alternative flows (ARToolKit primary native option, ARCore alternative) and an optional Godot project for cross-platform exports.
+FediQuest is an open-source augmented reality GPS-based experience platform that encourages people to:
+- **Go outside** and explore their environment
+- **Help each other** through community quests  
+- **Do something good for the environment**
+
+Players earn XP by completing social-ecological quests and unlock **digital goods** like:
+- 🎨 Avatar skins (cosmetic upgrades)
+- 🐾 Companion creatures (with special abilities)
+- ⭐ Level upgrades and titles
+- 🌍 Environmental impact tracking
+
+This prototype prioritizes an **Android-native-first approach** with ARToolKit as the primary native option, while retaining a minimal, text-only repo with no binaries.
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Game Features](#game-features)
 - [Architecture Overview](#architecture-overview)
 - [DeGoogle Checklist](#degoogle-checklist)
-- [Running the Web Demo](#running-the-web-demo)
+- [Native Android Build](#native-android-build)
 - [Server Configuration](#server-configuration)
-- [Native Build (Optional)](#native-build-optional)
-- [Godot Project (Optional)](#godot-project-optional)
 - [Cache Cleaning & Reproducible Builds](#cache-cleaning--reproducible-builds)
 - [File Placement Guide](#file-placement-guide)
 - [PR Checklist](#pr-checklist)
@@ -18,59 +28,118 @@ FediQuest is an open-source augmented reality GPS-based experience platform. Thi
 ## Quick Start
 
 ```bash
-# Clone and navigate to web directory
-cd web
+# Ensure Android SDK/NDK installed
+export ANDROID_HOME=/path/to/android/sdk
+export ANDROID_NDK_HOME=/path/to/android/ndk
 
-# Option 1: Python HTTP server (no dependencies)
-python3 -m http.server 8080
+# Place ARToolKit .so files in app/src/main/jniLibs/
+# See app/README_NATIVE.md for download/build instructions
 
-# Option 2: npm dev server
-npm install
-npm start
+# Clean caches first (required before building)
+rm -rf ~/.gradle/caches
+rm -rf app/build app/.gradle
 
-# Open browser at: http://localhost:8080
-# Enable GPS permissions when prompted
+# Build debug APK
+cd app
+./gradlew assembleDebug
+
+# APK output: app/build/outputs/apk/debug/app-debug.apk
+# Install on device: adb install -r build/outputs/apk/debug/app-debug.apk
 ```
+
+## Game Features
+
+### Social-Ecological Quests
+
+FediQuest features 6 types of environmental quests that reward players for real-world positive actions:
+
+| Quest Type | Description | Base XP | Emoji |
+|------------|-------------|---------|-------|
+| 🌱 Tree Planting | Plant trees in your community | 100 XP | 🌱 |
+| ♻️ Recycling Station | Visit recycling centers | 75 XP | ♻️ |
+| 🧹 Cleanup Zone | Participate in cleanup events | 50 XP | 🧹 |
+| 🌸 Wildflower Garden | Plant native wildflowers | 120 XP | 🌸 |
+| 💧 Water Conservation | Support water conservation efforts | 90 XP | 💧 |
+| 🦋 Wildlife Habitat | Create wildlife-friendly spaces | 110 XP | 🦋 |
+
+### Avatar & Progression System
+
+**Level Titles**: Newcomer → Helper → Supporter → Advocate → Champion → Guardian → Protector → Hero → Legend → Eco Warrior
+
+**Avatar Skins** (unlocked by leveling up):
+- Default Outfit (Level 1) 👕
+- Nature Explorer (Level 3) 🥾
+- Eco Scientist (Level 5) 🔬
+- Master Gardener (Level 7) 👒
+- Earth Guardian (Level 10) 🛡️
+- Climate Activist (Level 12) 📢
+- Eco Legend (Level 15) 👑
+
+### Companion System
+
+Companions are creature friends that accompany players and provide special bonuses:
+
+| Companion | Unlock Level | Special Ability |
+|-----------|--------------|-----------------|
+| 🐝 Busy Bee | 2 | Highlights nearby flower planting spots |
+| 🐦 Song Bird | 4 | Alerts you to wildlife conservation areas |
+| 🦊 Forest Fox | 6 | Finds hidden cleanup opportunities |
+| 🐢 Sea Turtle | 8 | Guides to water conservation sites |
+| 🦉 Wise Owl | 10 | Provides +10% XP bonus on all quests |
+| 🦋 Monarch Butterfly | 12 | Reveals rare quest locations |
+
+### Fediverse Integration
+
+- Share quest completions to your Fediverse instance (ActivityPub protocol)
+- Configure your own instance (default: mastodon.social)
+- Optional feature - no social account required to play
+- Activities include: quest started, quest completed, level up, companion unlocked, skin equipped
+
+### Environmental Impact Tracking
+
+Track your real-world positive impact:
+- Trees planted
+- Recycling trips made
+- Cleanup events participated in
+- Wildflowers planted
+- Water saved (liters)
+- Wildlife habitats created
 
 ## Architecture Overview
 
 ```
 FediQuest
-├── web/                    # Primary: A-Frame + AR.js WebAR demo
-│   ├── index.html          # Main demo page
-│   ├── js/spawn-loader.js  # GPS & spawn data handling
-│   └── models/             # glTF model placeholders
-├── app/                    # Secondary: Native Android skeleton
+├── app/                    # Primary: Native Android skeleton
 │   ├── README_NATIVE.md    # ARToolKit/ARCore integration guide
-│   └── src/                # Kotlin stubs
-├── godot/                  # Optional: Godot cross-platform export
-│   ├── project.godot       # Godot project config
-│   └── scripts/            # GDScript spawn loaders
+│   ├── CMakeLists.txt      # Native build configuration
+│   └── src/main/java/org/fediquest/
+│       ├── MainActivity.kt     # Kotlin stub (native AR default)
+│       ├── SpawnFetcher.kt     # ETag/If-None-Match handling
+│       └── Config.kt           # Constants & placeholders
 ├── server/                 # Spawn configuration
-│   └── server.json         # Sample spawn entries
-└── scripts/                # Build & maintenance utilities
-    └── clean_caches.sh     # Cache cleaning script
+│   └── server.json         # 6 sample spawn entries with ETags
+└── .github/
+    └── PR_TEMPLATE.md      # Reviewer checklist
 ```
 
 ### Primary vs Secondary Flows
 
 | Flow | Technology | Priority | Install Required |
 |------|------------|----------|------------------|
-| **Web Demo** | A-Frame + AR.js | Primary | None (browser only) |
-| Native AR | ARToolKit | Secondary | Android build |
+| **Native AR** | ARToolKit | Primary | Android build + .so files |
 | Native AR | ARCore (optional) | Alternative | Android build + Google deps |
-| Cross-platform | Godot | Optional | Godot Engine |
+| Web Demo | Removed from this PR | N/A | N/A |
 
 ## DeGoogle Checklist
 
 FediQuest is committed to avoiding proprietary Google services for core features:
 
-- ✅ **Maps**: Uses OpenStreetMap + Leaflet (not Google Maps)
-- ✅ **GPS**: Uses browser/device native GPS APIs (no Google Location Services required)
-- ✅ **Authentication**: No Google Sign-In required; optional OpenID/OAuth with self-hosted providers
-- ✅ **Analytics**: No analytics by default; opt-in privacy-respecting solutions only (e.g., Plausible, Matomo)
-- ✅ **Hosting**: Works on any static host (GitHub Pages, Netlify, self-hosted); no Firebase required
-- ✅ **ARCore**: Optional alternative only; not required for web demo or core functionality
+- ✅ **Maps**: Uses OpenStreetMap (native OSM tile rendering, no Google Maps API)
+- ✅ **GPS**: Uses Android LocationManager/FusedLocationProvider (no Google Location Services required for core)
+- ✅ **Authentication**: No Google Sign-In required; optional OAuth with self-hosted providers
+- ✅ **Analytics**: No analytics by default; opt-in privacy-respecting solutions only
+- ✅ **Hosting**: Works on any static host; no Firebase required
+- ✅ **ARCore**: Optional alternative only; NOT required for core app flows
 - ✅ **Play Services**: Not required for core app flows
 
 ### What We Avoid
@@ -82,57 +151,91 @@ FediQuest is committed to avoiding proprietary Google services for core features
 - ❌ Google Analytics
 - ❌ Proprietary tracking SDKs
 
-## Running the Web Demo
+## Native Android Build
 
 ### Prerequisites
 
-- Modern browser with WebXR/WebGL support (Firefox, Chrome, Edge)
-- GPS-enabled device (phone/tablet recommended for AR experience)
-- HTTPS context required for GPS permissions (use localhost for development)
+- Android Studio or command-line SDK tools
+- Android NDK r25c or newer
+- CMake 3.22+
+- ARToolKit prebuilt libraries (see below)
 
-### Method 1: Python HTTP Server (Recommended for Testing)
-
-```bash
-cd web
-python3 -m http.server 8080
-# Visit: http://localhost:8080
-```
-
-### Method 2: npm Dev Server
+### Environment Setup
 
 ```bash
-cd web
-npm install
-npm start
-# Visit: http://localhost:8080
+# Set environment variables
+export ANDROID_HOME=$HOME/Android/Sdk
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
+
+# Verify installation
+$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list
+$ANDROID_NDK_HOME/ndk-build --version
 ```
 
-### Method 3: Direct File Opening (Limited Functionality)
+### ARToolKit Integration (Primary Native Option)
 
-Some browsers allow opening `index.html` directly, but GPS permissions may be restricted without HTTPS.
+**Option A: Download Prebuilt Libraries**
 
-### Testing GPS Without Mobile Device
+1. Visit: https://github.com/artoolkitx/artoolkit5/releases
+2. Download the latest Android prebuilt package
+3. Extract and copy `.so` files to `app/src/main/jniLibs/{abi}/`
 
-For desktop testing, most browsers allow GPS spoofing in developer tools:
+**Option B: Build from Source**
 
-1. Open DevTools (F12)
-2. Go to "Sensors" tab (Chrome: More tools → Sensors)
-3. Set custom location coordinates
-4. Refresh page
+```bash
+# Clone ARToolKit
+git clone https://github.com/artoolkitx/artoolkit5.git
+cd artoolkit5
 
-### CORS Guidance
+# Configure with NDK
+mkdir build && cd build
+cmake .. \
+  -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+  -DANDROID_ABI="arm64-v8a" \
+  -DANDROID_PLATFORM=android-24
 
-When hosting `server.json` separately from the web demo, ensure CORS headers are set:
+# Build
+make -j4
 
+# Copy .so files to FediQuest project
+cp libAR*.so ../../fediquest/app/src/main/jniLibs/arm64-v8a/
 ```
-Access-Control-Allow-Origin: *
+
+### Building the APK
+
+```bash
+# Clean caches (REQUIRED before building)
+rm -rf ~/.gradle/caches
+rm -rf app/build app/.gradle
+
+# Navigate to app directory
+cd app
+
+# Build debug APK
+./gradlew assembleDebug
+
+# Output location
+ls -lh build/outputs/apk/debug/app-debug.apk
+
+# Install on device
+adb install -r build/outputs/apk/debug/app-debug.apk
 ```
 
-Or host both on the same origin.
+### Build Variants
+
+```bash
+# Debug build (default)
+./gradlew assembleDebug
+
+# Release build (requires signing config)
+./gradlew assembleRelease
+```
+
+See `app/README_NATIVE.md` for detailed native integration instructions.
 
 ## Server Configuration
 
-The `server/server.json` file contains spawn point definitions:
+The `server/server.json` file contains spawn point definitions with ETag support:
 
 ```json
 {
@@ -141,157 +244,133 @@ The `server/server.json` file contains spawn point definitions:
       "id": "spawn_001",
       "latitude": 40.7128,
       "longitude": -74.0060,
-      "modelUrl": "models/example.glb",
+      "modelUrl": "models/tree.glb",
+      "etag": "\"v1-abc123\"",
       "metadata": {
-        "name": "Example Spawn",
-        "description": "A sample AR object"
+        "name": "Eco Tree #1",
+        "description": "Plant a tree in Central Park",
+        "type": "planting",
+        "xpReward": 100
       }
     }
   ]
 }
 ```
 
-See `server/server.json` for 6 sample entries.
+See `server/server.json` for 6 sample entries with social-ecological quest types.
 
-### Updating Spawn Points
+### ETag Caching
 
-1. Edit `server/server.json`
-2. Update `modelUrl` paths to point to your hosted glTF models
-3. Adjust latitude/longitude for your test location
-4. The web demo fetches this automatically with ETag caching
+The `SpawnFetcher.kt` implements ETag/If-None-Match handling:
 
-## Native Build (Optional)
-
-See `app/README_NATIVE.md` for detailed instructions.
-
-### Quick Native Build Steps
-
-```bash
-# Ensure Android SDK/NDK installed
-export ANDROID_HOME=/path/to/android/sdk
-export ANDROID_NDK_HOME=/path/to/android/ndk
-
-# Place ARToolKit .so files in app/src/main/jniLibs/
-# See app/README_NATIVE.md for download links
-
-# Clean caches first
-./scripts/clean_caches.sh
-
-# Build APK
-cd app
-./gradlew assembleDebug
-
-# APK output: app/build/outputs/apk/debug/app-debug.apk
-```
-
-**Note**: Native builds produce APKs locally only. Do not commit binary artifacts (>500MB repo limit).
-
-## Godot Project (Optional)
-
-See `godot/README_GODOT.md` for setup instructions.
-
-### Quick Godot Setup
-
-1. Install Godot 4.x from https://godotengine.org
-2. Open `godot/project.godot`
-3. Place your models in `godot/assets/models/`
-4. Run project or export to target platform
+1. First request: Fetch full `server.json`, store ETag
+2. Subsequent requests: Send `If-None-Match: <etag>` header
+3. Server returns `304 Not Modified` if data unchanged
+4. Reduces bandwidth and improves load times
 
 ## Cache Cleaning & Reproducible Builds
 
-To ensure reproducible builds and clean state for CI/reviewers:
+To ensure reproducible builds and clean state for CI/reviewers, run these commands locally before building:
 
-### Automated Cache Cleaning
-
-```bash
-# Run the cache cleaning script
-./scripts/clean_caches.sh
-```
-
-This removes:
-- npm cache and node_modules
-- Gradle caches and build directories
-- Local dev server caches
-- Browser cache hints
-
-### Manual Cache Cleaning
+### Gradle Cache Cleaning
 
 ```bash
-# npm cache
-npm cache clean --force
-rm -rf web/node_modules
-
-# Gradle cache
-rm -rf ~/.gradle/caches
+# Remove Gradle build outputs
 rm -rf app/build
 rm -rf app/.gradle
+rm -rf .gradle
 
-# Python cache
-find . -type d -name "__pycache__" -exec rm -rf {} +
-find . -type f -name "*.pyc" -delete
+# Remove Gradle cache (global)
+rm -rf ~/.gradle/caches
 ```
 
-### Reproducible Build Checklist
+### NDK Cache Cleaning
 
-- [ ] Run `./scripts/clean_caches.sh` before building
-- [ ] Verify `server/server.json` is accessible
-- [ ] Confirm GPS permissions enabled in browser/device
-- [ ] Use same Node.js version (check `web/package.json` engines)
-- [ ] Use same Gradle version (check `app/build.gradle`)
+```bash
+# Remove CMake build artifacts
+rm -rf app/.externalNativeBuild
+rm -rf app/.cxx
+```
+
+### Full Clean Build
+
+```bash
+# From project root
+rm -rf app/build app/.gradle app/.externalNativeBuild app/.cxx ~/.gradle/caches
+
+# Then rebuild
+cd app
+./gradlew clean assembleDebug
+```
+
+**Note**: No cache-clean scripts are committed to this repo. Reviewers and CI must run these commands locally as documented.
 
 ## File Placement Guide
-
-### Models (Not Included in Repo)
-
-```
-web/models/          # Place .glb/.gltf files here
-app/src/main/assets/ # Place native assets here
-godot/assets/models/ # Place Godot models here
-```
-
-See `web/models/README.md` for model requirements.
 
 ### Native Libraries (Not Included in Repo)
 
 ```
-app/src/main/jniLibs/arm64-v8a/  # ARToolKit .so files
-app/src/main/jniLibs/armeabi-v7a/
+app/src/main/jniLibs/
+├── arm64-v8a/
+│   ├── libAR.so          # ARToolKit core library
+│   ├── libARw.so         # ARToolKit video library
+│   └── libglog.so        # Google logging (if needed)
+└── armeabi-v7a/
+    ├── libAR.so
+    ├── libARw.so
+    └── libglog.so
 ```
 
-See `app/README_NATIVE.md` for ARToolKit download links.
+**These `.so` files are NOT included in the repository** (>500MB limit). Follow instructions in `app/README_NATIVE.md` to download or build them.
 
-### Godot Export Templates (Not Included)
+### 3D Models for Quests (Not Included)
 
-Download from Godot Engine or configure in export settings.
+```
+app/src/main/assets/models/
+├── tree.glb              # Planting quest model
+├── recycle_bin.glb       # Recycling quest model
+├── cleanup_bag.glb       # Cleanup quest model
+├── wildflower.glb        # Wildflower planting model
+├── water_station.glb     # Water conservation model
+└── birdhouse.glb         # Wildlife habitat model
+```
+
+Place your own glTF/GLB models in this directory. Update `Config.kt` with correct paths.
 
 ## PR Checklist
 
 Before submitting or reviewing this PR:
 
-- [ ] Web demo runs locally (`python3 -m http.server 8080`)
-- [ ] GPS permissions handled gracefully (fallback shown on denial)
-- [ ] `server/server.json` loads with ETag caching
-- [ ] OpenStreetMap fallback works when AR unavailable
-- [ ] Cache cleaning script runs successfully
-- [ ] No binary blobs committed (models, .so files, APKs)
+- [ ] Native Android skeleton builds successfully
+- [ ] ARToolKit `.so` files placed in `jniLibs/` (or documented as placeholder)
+- [ ] `server/server.json` has 6 spawn entries with ETags
+- [ ] `SpawnFetcher.kt` demonstrates ETag/If-None-Match handling
+- [ ] `MainActivity.kt` defaults to native AR mode
+- [ ] No binary blobs committed (no `.so`, `.apk`, `.glb` files)
 - [ ] README documentation complete
 - [ ] DeGoogle checklist verified (no Google dependencies for core)
+- [ ] Cache cleaning commands documented (no scripts committed)
 - [ ] All placeholder files have clear placement instructions
 
 ## Contributing
 
 This is a FOSS project. Contributions welcome!
 
-- Web AR improvements (A-Frame/AR.js)
 - Native Android enhancements (ARToolKit)
-- Godot export configurations
+- Social-ecological quest implementations
 - Privacy-focused feature additions
 - Documentation improvements
 
 ## Acknowledgments
 
-- [A-Frame](https://aframe.io/) - Web framework for VR/AR
-- [AR.js](https://ar-js-org.github.io/AR.js-Docs/) - WebAR library
-- [ARToolKit](https://artoolkit.org/) - Native AR library
-- [Godot Engine](https://godotengine.org/) - Cross-platform game engine
+- [ARToolKit](https://artoolkit.org/) - Native AR library (LGPL v3)
 - [OpenStreetMap](https://www.openstreetmap.org/) - Open map data
+- [Android NDK](https://developer.android.com/ndk) - Native development
+
+## License Notes
+
+- ARToolKit: LGPL v3 (ensure compliance if distributing)
+- ARCore: Proprietary (Google terms apply, optional only)
+- FediQuest code: FOSS (license omitted per request)
+
+Always verify license compatibility before distribution.
