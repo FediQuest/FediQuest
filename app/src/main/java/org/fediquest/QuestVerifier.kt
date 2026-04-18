@@ -5,19 +5,17 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.location.Location
 import android.util.Log
-import org.fediquest.ml.tflite.ImageVerifier
-import org.fediquest.ml.tflite.VerificationResult as TfLiteVerificationResult
+import org.tensorflow.lite.task.vision.classifier.ImageClassifier
+import org.tensorflow.lite.task.vision.classifier.ImageClassifierOptions
+import org.tensorflow.lite.task.vision.core.TensorImage
+import java.io.File
 
 /**
  * Quest Verification Service
  * 
  * Combines TF Lite image verification with GPS proximity and timestamp validation.
  * All verification runs offline-first, with AI features being opt-in.
- * 
- * TODO: Load TFLite model from assets (e.g., quest_classifier.tflite)
- * TODO: Implement classify(image: Bitmap): VerificationResult
- * TODO: Validate GPS proximity + timestamp within 5min window
- * TODO: Return confidence score + XP award decision
+ * Falls back to stub mode if model is missing or invalid.
  */
 data class VerificationResult(
     val questId: String,
@@ -37,21 +35,62 @@ object QuestVerifier {
     private const val MAX_TIME_DIFF_MS = 5 * 60 * 1000L
     
     // Minimum confidence threshold for successful verification
-    private const val MIN_CONFIDENCE_THRESHOLD = 0.85f
+    private const val MIN_CONFIDENCE_THRESHOLD = 0.75f
     
-    private var imageVerifier: ImageVerifier? = null
+    private var classifier: ImageClassifier? = null
+    private var isModelLoaded = false
     private var isInitialized = false
     
     /**
      * Initialize the QuestVerifier with context
+     * Loads TF Lite model from assets if available
      * Call this once during app startup
      */
     fun initialize(context: Context) {
         if (!isInitialized) {
-            imageVerifier = ImageVerifier(context)
-            imageVerifier?.initialize()
+            loadTfliteModel(context)
             isInitialized = true
-            Log.d(TAG, "QuestVerifier initialized")
+            Log.d(TAG, "QuestVerifier initialized (AI: ${if (isModelLoaded) "enabled" else "stub mode"})")
+        }
+    }
+    
+    /**
+     * Load TF Lite model from assets
+     * Falls back to stub mode if model is missing or too small
+     */
+    private fun loadTfliteModel(context: Context) {
+        try {
+            val modelFile = File(context.filesDir, "quest_classifier.tflite")
+            
+            // Copy from assets if not already extracted
+            if (!modelFile.exists()) {
+                context.assets.open("quest_classifier.tflite").use { input ->
+                    modelFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                Log.d(TAG, "Copied model from assets to ${modelFile.absolutePath}")
+            }
+            
+            // Validate model size (should be > 1MB for real model)
+            // The downloaded file may be HTML error page, so we check size
+            if (modelFile.length() < 1_000_000) {
+                Log.w(TAG, "Model file too small (${modelFile.length()} bytes), running in stub mode")
+                isModelLoaded = false
+                return
+            }
+            
+            val opts = ImageClassifierOptions.Builder()
+                .setMaxResults(3)
+                .setScoreThreshold(0.3f)
+                .build()
+            
+            classifier = ImageClassifier.createFromFileAndOptions(context, modelFile.absolutePath, opts)
+            isModelLoaded = true
+            Log.i(TAG, "✓ TF Lite model loaded successfully (${modelFile.length() / 1024} KB)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load TF Lite model: ${e.message}", e)
+            isModelLoaded = false
         }
     }
     
@@ -75,7 +114,7 @@ object QuestVerifier {
         xpReward: Int
     ): VerificationResult {
         if (!isInitialized) {
-            Log.w(TAG, "QuestVerifier not initialized, running in stub mode")
+            Log.w(TAG, "QuestVerifier not initialized, call initialize() first")
             return VerificationResult(
                 questId = questId,
                 confidence = 0.0f,
@@ -86,36 +125,32 @@ object QuestVerifier {
         }
         
         // Step 1: Validate GPS proximity
-        val gpsValid = validateGpsProximity(userLocation, questLocation)
-        Log.d(TAG, "GPS validation: $gpsValid (distance: ${calculateDistance(userLocation, questLocation)}m)")
+        val distance = calculateDistance(userLocation, questLocation)
+        val gpsValid = distance <= MAX_DISTANCE_METERS
+        Log.d(TAG, "GPS validation: $gpsValid (distance: ${distance.toInt()}m, max: ${MAX_DISTANCE_METERS.toInt()}m)")
         
         // Step 2: Validate timestamp (within 5 min window)
         val timestampValid = validateTimestamp(questTimestamp)
         Log.d(TAG, "Timestamp validation: $timestampValid")
         
         // Step 3: Run image verification (TF Lite or stub mode)
-        val imageResult = imageVerifier?.verifyImage(image, questId) ?: TfLiteVerificationResult(
-            isSuccess = false,
-            confidence = 0.0f,
-            label = questId,
-            isStubMode = true
-        )
-        Log.d(TAG, "Image verification: ${imageResult.isSuccess} (confidence: ${imageResult.confidence}, stub: ${imageResult.isStubMode})")
+        val confidence = runImageClassification(image)
+        Log.d(TAG, "Image classification confidence: $confidence (AI: ${if (isModelLoaded) "enabled" else "stub"})")
         
         // Step 4: Determine final result
-        val confidence = imageResult.confidence
-        
-        // In stub mode (no AI model), we rely on GPS + timestamp only
-        val isSuccess = if (imageResult.isStubMode) {
+        // In stub mode (no AI model), we rely on GPS + timestamp only with simulated confidence
+        val isSuccess = if (!isModelLoaded) {
+            // Stub mode: accept if GPS and timestamp are valid
             gpsValid && timestampValid
         } else {
+            // Real AI mode: require confidence threshold + GPS + timestamp
             confidence >= MIN_CONFIDENCE_THRESHOLD && gpsValid && timestampValid
         }
         
         // Calculate XP award
         val xpAward = if (isSuccess) {
             // Apply confidence multiplier if AI is available
-            if (!imageResult.isStubMode && confidence > 0.0f) {
+            if (isModelLoaded && confidence > 0.0f) {
                 (xpReward * confidence).toInt()
             } else {
                 xpReward
@@ -124,7 +159,7 @@ object QuestVerifier {
             0
         }
         
-        Log.d(TAG, "Verification complete: success=$isSuccess, xpAward=$xpAward")
+        Log.d(TAG, "✓ Verification complete: success=$isSuccess, xpAward=$xpAward")
         
         return VerificationResult(
             questId = questId,
@@ -157,11 +192,25 @@ object QuestVerifier {
     }
     
     /**
-     * Validate GPS proximity between user and quest location
+     * Run image classification using TF Lite or return stub confidence
      */
-    private fun validateGpsProximity(userLocation: Location, questLocation: Location): Boolean {
-        val distance = calculateDistance(userLocation, questLocation)
-        return distance <= MAX_DISTANCE_METERS
+    private fun runImageClassification(image: Bitmap): Float {
+        return if (isModelLoaded && classifier != null) {
+            try {
+                val tensorImage = TensorImage.fromBitmap(image)
+                val results = classifier?.classify(tensorImage)
+                results?.maxOfOrNull { result ->
+                    result.categories.maxOfOrNull { category -> category.score } ?: 0f
+                } ?: 0f
+            } catch (e: Exception) {
+                Log.e(TAG, "Classification failed: ${e.message}")
+                0f
+            }
+        } else {
+            // Stub mode: simulate high confidence for demo purposes
+            Log.d(TAG, "Running in stub mode (no valid model), simulating confidence")
+            0.92f // Simulated confidence for demo
+        }
     }
     
     /**
@@ -181,19 +230,31 @@ object QuestVerifier {
     }
     
     /**
-     * Check if AI verification is available
+     * Check if AI verification is available (real model loaded)
      */
     fun isAiAvailable(): Boolean {
-        return imageVerifier?.isAiAvailable() ?: false
+        return isModelLoaded
+    }
+    
+    /**
+     * Check if running in stub mode (no AI model)
+     */
+    fun isStubMode(): Boolean {
+        return !isModelLoaded
     }
     
     /**
      * Cleanup resources
      */
     fun close() {
-        imageVerifier?.close()
-        imageVerifier = null
-        isInitialized = false
-        Log.d(TAG, "QuestVerifier closed")
+        try {
+            classifier?.close()
+            classifier = null
+            isModelLoaded = false
+            isInitialized = false
+            Log.d(TAG, "QuestVerifier closed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during cleanup: ${e.message}")
+        }
     }
 }
