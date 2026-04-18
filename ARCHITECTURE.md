@@ -17,11 +17,15 @@ FediQuest is an offline-first AR quest app with opt-in AI and Fediverse features
 app/src/main/java/org/fediquest/
 ├── data/                          # Room Database Layer
 │   ├── entity/                    # Database entities
-│   │   ├── QuestEntity.kt         # Quest data model
-│   │   └── PlayerXpEntity.kt      # Player XP/level tracking
+│   │   ├── QuestEntity.kt         # Quest data model with QuestType enum
+│   │   ├── PlayerStateEntity.kt   # Player state + companion evolution stage
+│   │   └── PlayerXpEntity.kt      # Legacy XP tracking (deprecated)
 │   ├── dao/                       # Data Access Objects
 │   │   ├── QuestDao.kt            # Quest CRUD operations
-│   │   └── PlayerXpDao.kt         # XP/level operations
+│   │   └── PlayerDao.kt           # Player state operations
+│   ├── repository/                # Repository Layer
+│   │   ├── QuestRepository.kt     # Single source of truth for quests
+│   │   └── PlayerRepository.kt    # Single source of truth for player state
 │   └── database/
 │       └── AppDatabase.kt         # Main Room database
 │
@@ -53,18 +57,88 @@ app/src/main/java/org/fediquest/
 
 ### 1. Room Database (`data/`)
 
+**Build Configuration:**
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("com.google.devtools.ksp") version "1.9.22-1.0.16"
+}
+
+dependencies {
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+}
+```
+
 **Entities:**
-- `QuestEntity`: Stores quest data (type, location, rewards, completion status)
-- `PlayerXpEntity`: Tracks player XP, level, daily streaks
+
+- `QuestEntity`: Stores quest data with typed enum
+  ```kotlin
+  enum class QuestType { SOCIAL, ECOLOGICAL, CREATIVE }
+  
+  data class QuestEntity(
+      @PrimaryKey val id: String,
+      val title: String,
+      val description: String,
+      val type: QuestType,
+      val locationLat: Double,
+      val locationLng: Double,
+      val radiusMeters: Float = 50f,
+      val xpReward: Int,
+      val imageUrl: String?,
+      val isCompleted: Boolean = false,
+      val createdAt: Long,
+      val fediverseSynced: Boolean = false // For ActivityPub queue
+  )
+  ```
+
+- `PlayerStateEntity`: Tracks player state and companion evolution
+  ```kotlin
+  data class PlayerStateEntity(
+      @PrimaryKey val userId: String = "local_player",
+      val totalXP: Int = 0,
+      val level: Int = 1,
+      val avatarSkinId: String = "default",
+      val companionId: String = "starter",
+      val companionEvolutionStage: Int = 0,
+      val lastQuestCompletedAt: Long? = null
+  )
+  ```
 
 **DAOs:**
-- `QuestDao`: Async operations for quests with Flow support
-- `PlayerXpDao`: XP tracking and leaderboard queries
+
+- `QuestDao`: Async operations for quests
+  - `getActiveQuests(): Flow<List<QuestEntity>>` - Stream of incomplete quests
+  - `getQuestById(questId: String): QuestEntity?` - Get specific quest
+  - `insertQuest(quest: QuestEntity)` - Add/update quest
+  - `markQuestCompleted(questId: String)` - Mark as done
+  - `getUnsyncedCompletions(): List<QuestEntity>` - Get quests pending Fediverse sync
+
+- `PlayerDao`: Player state operations
+  - `getPlayerState(userId: String): Flow<PlayerStateEntity?>` - Stream player state
+  - `addXP(userId: String, amount: Int)` - Add XP
+  - `updateCompanionStage(userId: String, stage: Int)` - Update evolution
+  - `getTopPlayers(): Flow<List<PlayerStateEntity>>` - Local leaderboard
+
+**Repositories:**
+
+- `QuestRepository`: Single source of truth for quest data
+  - Abstracts DAO operations
+  - Handles completion logic
+  - Manages Fediverse sync queue
+  
+- `PlayerRepository`: Single source of truth for player state
+  - XP management
+  - Level updates
+  - Companion evolution tracking
 
 **Features:**
 - Offline-first storage
 - Automatic caching with sync timestamps
 - Coroutines + Flow for reactive UI updates
+- Typed quest categories via `QuestType` enum
+- Fediverse sync tracking via `fediverseSynced` flag
 
 ### 2. TF Lite Image Verifier (`ml/tflite/`)
 
