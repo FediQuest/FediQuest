@@ -137,14 +137,13 @@ fi
 
 # Build the app
 print_info "Building FediQuest debug APK..."
-cd app
 
-# Run Gradle build
+# Run Gradle build from project root (gradlew is in project root, not app/)
 ./gradlew clean assembleDebug --stacktrace
 
 # Check build result
-if [ -f "build/outputs/apk/debug/app-debug.apk" ]; then
-    APK_SIZE=$(ls -lh build/outputs/apk/debug/app-debug.apk | awk '{print $5}')
+if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+    APK_SIZE=$(ls -lh app/build/outputs/apk/debug/app-debug.apk | awk '{print $5}')
     print_info "=============================================="
     print_info "Build Successful!"
     print_info "=============================================="
@@ -153,12 +152,12 @@ if [ -f "build/outputs/apk/debug/app-debug.apk" ]; then
     echo "APK Size: $APK_SIZE"
     echo ""
     print_info "To install on a connected device:"
-    echo "  adb install -r build/outputs/apk/debug/app-debug.apk"
+    echo "  adb install -r app/build/outputs/apk/debug/app-debug.apk"
     echo ""
     print_info "To run the app:"
     echo "  1. Connect an ARCore-compatible Android device"
     echo "  2. Enable USB debugging on the device"
-    echo "  3. Run: adb install -r build/outputs/apk/debug/app-debug.apk"
+    echo "  3. Run: adb install -r app/build/outputs/apk/debug/app-debug.apk"
     echo "  4. Launch FediQuest from your device"
     echo ""
     print_warn "Note: For full AR functionality, you need to:"
@@ -170,9 +169,6 @@ else
     print_info "Check the build output above for errors."
     exit 1
 fi
-
-# Return to project root
-cd ..
 
 # Print summary
 echo ""

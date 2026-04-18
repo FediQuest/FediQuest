@@ -259,17 +259,14 @@ dependencies {
 rm -rf ~/.gradle/caches
 rm -rf app/build app/.gradle
 
-# Navigate to app directory
-cd app
-
-# Build debug APK
+# Build debug APK from project root
 ./gradlew assembleDebug
 
 # Output location
-ls -lh build/outputs/apk/debug/app-debug.apk
+ls -lh app/build/outputs/apk/debug/app-debug.apk
 
 # Install on device
-adb install -r build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### Build Variants
