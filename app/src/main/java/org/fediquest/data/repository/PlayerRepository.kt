@@ -25,14 +25,16 @@ class PlayerRepository(private val dao: PlayerDao) {
      * Get player state once (suspend function)
      */
     suspend fun getPlayerStateOnce(userId: String = "local_player"): PlayerStateEntity? {
-        return dao.getPlayerStateOnce(userId)
+        // TODO: getPlayerStateOnce removed from DAO, delegate to getPlayerStateSync
+        return dao.getPlayerStateSync(userId)
     }
     
     /**
      * Initialize or update player state
      */
     suspend fun savePlayerState(playerState: PlayerStateEntity) {
-        dao.insertOrReplace(playerState)
+        // TODO: insertOrReplace renamed to insertOrUpdate in Room DAO
+        dao.insertOrUpdate(playerState)
     }
     
     /**
@@ -47,8 +49,13 @@ class PlayerRepository(private val dao: PlayerDao) {
      * Update player level
      */
     suspend fun updateLevel(userId: String = "local_player", level: Int) {
+        // TODO: updateXP removed from DAO, use entity copy + insertOrUpdate pattern
         val currentState = getPlayerStateOnce(userId) ?: return
-        dao.updateXP(userId, currentState.totalXP, level)
+        val updated = currentState.copy(
+            level = level,
+            updatedAt = System.currentTimeMillis()
+        )
+        dao.insertOrUpdate(updated)
     }
     
     /**
@@ -56,20 +63,33 @@ class PlayerRepository(private val dao: PlayerDao) {
      * Called when companion evolves based on XP/level milestones
      */
     suspend fun updateCompanionStage(userId: String = "local_player", stage: Int) {
-        dao.updateCompanionStage(userId, stage)
+        // TODO: updateCompanionStage removed from DAO, use new updateCompanion API
+        // PlayerDao now has: suspend fun updateCompanion(userId, companionId, evolutionStage)
+        dao.updateCompanion(
+            userId = userId,
+            companionId = "default_companion", // TODO: Pass companionId as parameter
+            evolutionStage = stage
+        )
     }
     
     /**
      * Update avatar skin
      */
     suspend fun updateAvatarSkin(userId: String = "local_player", skinId: String) {
-        dao.updateAvatarSkin(userId, skinId)
+        // TODO: updateAvatarSkin removed from DAO, use entity copy + insertOrUpdate pattern
+        val currentState = getPlayerStateOnce(userId) ?: return
+        val updated = currentState.copy(
+            avatarSkinId = skinId,
+            updatedAt = System.currentTimeMillis()
+        )
+        dao.insertOrUpdate(updated)
     }
     
     /**
      * Get top players by XP (for local leaderboard)
      */
     fun getTopPlayers(): Flow<List<PlayerStateEntity>> {
-        return dao.getTopPlayers()
+        // TODO: getTopPlayers now requires limit parameter
+        return dao.getTopPlayers(limit = 10)
     }
 }
