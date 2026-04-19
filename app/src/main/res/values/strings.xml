@@ -60,7 +60,7 @@
     
     <!-- Profile -->
     <string name="profile_level">Level %d</string>
-    <string name="profile_xp">%d / %d XP</string>
+    <string name="profile_xp" formatted="false">%d / %d XP</string>
     <string name="profile_coins">%d Coins</string>
     <string name="profile_quests_completed">%d Quests Completed</string>
     <string name="profile_badges">Badges</string>

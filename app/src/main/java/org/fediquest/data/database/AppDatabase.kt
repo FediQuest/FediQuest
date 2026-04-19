@@ -10,8 +10,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.fediquest.data.dao.PlayerDao
+import org.fediquest.data.dao.PlayerXpDao
 import org.fediquest.data.dao.QuestDao
 import org.fediquest.data.entity.PlayerStateEntity
+import org.fediquest.data.entity.PlayerXpEntity
 import org.fediquest.data.entity.QuestEntity
 
 /**
