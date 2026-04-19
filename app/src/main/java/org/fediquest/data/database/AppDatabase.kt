@@ -9,8 +9,10 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import org.fediquest.data.dao.PlayerDao
 import org.fediquest.data.dao.QuestDao
+import org.fediquest.data.dao.PlayerXpDao
 import org.fediquest.data.entity.PlayerStateEntity
 import org.fediquest.data.entity.QuestEntity
+import org.fediquest.data.entity.PlayerXpEntity
 
 /**
  * Central Room database for FediQuest.
@@ -19,14 +21,15 @@ import org.fediquest.data.entity.QuestEntity
  * ✅ Updated: Added migration for 'updatedAt' column + disabled schema export for demo.
  */
 @Database(
-    entities = [QuestEntity::class, PlayerStateEntity::class],
-    version = 2,  // ✅ Incremented from 1 → 2 to trigger migration
+    entities = [QuestEntity::class, PlayerStateEntity::class, PlayerXpEntity::class],
+    version = 3,  // ✅ Incremented from 1 → 2 to trigger migration
     exportSchema = false  // ✅ Disable to avoid schemaLocation complexity for demo build
 )
 abstract class AppDatabase : RoomDatabase() {
     
     abstract fun questDao(): QuestDao
     abstract fun playerDao(): PlayerDao
+    abstract fun playerXpDao(): PlayerXpDao
     
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
