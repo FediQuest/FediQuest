@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.location.Location
 import android.util.Log
 import org.tensorflow.lite.task.vision.classifier.ImageClassifier
+import org.tensorflow.lite.task.vision.core.MlImage
+
 // TODO: ImageClassifierOptions and TensorImage deprecated in TF Lite Task Vision 0.4.x
 // import org.tensorflow.lite.task.vision.classifier.ImageClassifierOptions
 // import org.tensorflow.lite.task.vision.core.TensorImage
@@ -210,11 +212,14 @@ object QuestVerifier {
         return if (isModelLoaded && classifier != null) {
             try {
                 // TODO: TensorImage deprecated in TF Lite Task Vision 0.4.x
-                // Directly use Bitmap for classification instead
-                val results = classifier?.classify(image)
-                results?.maxOfOrNull { result ->
+                // Use MlImage.Builder for direct Bitmap classification
+                val mlImage = MlImage.fromBitmap(image)
+                val results = classifier?.classify(mlImage)
+                val maxConfidence = results?.maxOfOrNull { result ->
                     result.categories.maxOfOrNull { category -> category.score } ?: 0f
                 } ?: 0f
+                mlImage.close()
+                maxConfidence
             } catch (e: Exception) {
                 Log.e(TAG, "Classification failed: ${e.message}")
                 0f
