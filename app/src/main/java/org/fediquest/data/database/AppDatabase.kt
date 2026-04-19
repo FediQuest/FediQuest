@@ -23,7 +23,8 @@ import org.fediquest.data.entity.QuestEntity
 @Database(
     entities = [
         QuestEntity::class,
-        PlayerStateEntity::class
+        PlayerStateEntity::class,
+        PlayerXpEntity::class
     ],
     version = 1,
     exportSchema = true
@@ -32,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     
     abstract fun questDao(): QuestDao
     abstract fun playerDao(): PlayerDao
+    abstract fun playerXpDao(): PlayerXpDao
     
     companion object {
         private const val DATABASE_NAME = "fediquest_db"
