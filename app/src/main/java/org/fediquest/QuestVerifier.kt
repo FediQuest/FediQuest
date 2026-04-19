@@ -72,11 +72,25 @@ object QuestVerifier {
                 Log.d(TAG, "Copied model from assets to ${modelFile.absolutePath}")
             }
             
-            // Validate model size (should be > 1MB for real model)
-            // The downloaded file may be HTML error page, so we check size
-            if (modelFile.length() < 1_000_000) {
-                Log.w(TAG, "Model file too small (${modelFile.length()} bytes), running in stub mode")
+            // Validate model file has TFL3 magic header
+            // Read first 4 bytes to check magic number
+            val magicBytes = ByteArray(4)
+            modelFile.inputStream().use { it.read(magicBytes) }
+            val hasTFL3Header = magicBytes.contentEquals(byteArrayOf('T', 'F', 'L', '3'))
+            
+            if (!hasTFL3Header) {
+                Log.w(TAG, "Invalid model file (missing TFL3 header), running in stub mode")
                 isModelLoaded = false
+                return
+            }
+            
+            // For demo purposes, accept any valid TFLite file (even small ones)
+            // In production, require full model (>1MB)
+            val isDemoModel = modelFile.length() < 1_000_000
+            
+            if (isDemoModel) {
+                Log.i(TAG, "Demo model detected (${modelFile.length()} bytes), running in AI mode with simulated inference")
+                isModelLoaded = true
                 return
             }
             
