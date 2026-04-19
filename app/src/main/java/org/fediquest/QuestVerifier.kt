@@ -63,7 +63,7 @@ object QuestVerifier {
             val modelFile = File(context.filesDir, "quest_classifier.tflite")
             
             // Copy from assets if not already extracted
-            if (!modelFile.exists()) {
+            if (!modelFile.exists() || modelFile.length() == 0L) {
                 context.assets.open("quest_classifier.tflite").use { input ->
                     modelFile.outputStream().use { output ->
                         input.copyTo(output)
@@ -76,7 +76,7 @@ object QuestVerifier {
             // Read first 4 bytes to check magic number
             val magicBytes = ByteArray(4)
             modelFile.inputStream().use { it.read(magicBytes) }
-            val hasTFL3Header = magicBytes.contentEquals(byteArrayOf('T', 'F', 'L', '3'))
+            val hasTFL3Header = magicBytes.contentEquals(byteArrayOf('T'.code.toByte(), 'F'.code.toByte(), 'L'.code.toByte(), '3'.code.toByte()))
             
             if (!hasTFL3Header) {
                 Log.w(TAG, "Invalid model file (missing TFL3 header), running in stub mode")

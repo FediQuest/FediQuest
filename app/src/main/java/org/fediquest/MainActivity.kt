@@ -191,62 +191,74 @@ class MainActivity : AppCompatActivity() {
      */
     private fun submitQuestProof(questId: String, image: Bitmap, location: Location) {
         lifecycleScope.launch(Dispatchers.IO) {
-            // Get database instances
-            val database = org.fediquest.data.database.AppDatabase.getInstance(this@MainActivity)
-            val questRepository = org.fediquest.data.repository.QuestRepository(database.questDao())
-            val playerRepository = org.fediquest.data.repository.PlayerRepository(database.playerDao())
-            
-            // Get quest data from database
-            val quest = questRepository.getQuestById(questId)
-            if (quest == null) {
+            try {
+                // Get database instances
+                val database = org.fediquest.data.database.AppDatabase.getInstance(this@MainActivity)
+                val questRepository = org.fediquest.data.repository.QuestRepository(database.questDao())
+                val playerRepository = org.fediquest.data.repository.PlayerRepository(database.playerDao())
+                
+                // Get quest data from database
+                val quest = questRepository.getQuestById(questId)
+                if (quest == null) {
+                    withContext(Dispatchers.Main) {
+                        showRetryDialog("Quest not found. Please try again.")
+                    }
+                    return@launch
+                }
+                
+                val questLocation = android.location.Location("").apply {
+                    latitude = quest.locationLat
+                    longitude = quest.locationLng
+                }
+                val questTimestamp = quest.createdAt
+                val xpReward = quest.xpReward
+                
+                val result = QuestVerifier.verify(
+                    questId = questId,
+                    image = image,
+                    userLocation = location,
+                    questLocation = questLocation,
+                    questTimestamp = questTimestamp,
+                    xpReward = xpReward
+                )
+                
                 withContext(Dispatchers.Main) {
-                    showRetryDialog("Quest not found. Please try again.")
-                }
-                return@launch
-            }
-            
-            val questLocation = android.location.Location("").apply {
-                latitude = quest.locationLat
-                longitude = quest.locationLng
-            }
-            val questTimestamp = quest.createdAt
-            val xpReward = quest.xpReward
-            
-            val result = QuestVerifier.verify(
-                questId = questId,
-                image = image,
-                userLocation = location,
-                questLocation = questLocation,
-                questTimestamp = questTimestamp,
-                xpReward = xpReward
-            )
-            
-            withContext(Dispatchers.Main) {
-                if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
-                    // Verification successful - persist to Room DB and award XP
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        questRepository.completeQuest(questId) // Persists completion
-                        playerRepository.addXP(amount = result.xpAward) // Updates level/companion
-                        
-                        withContext(Dispatchers.Main) {
-                            playerProfile?.addXP(result.xpAward)
-                            showSuccessDialog(result.xpAward)
-                            
-                            // TODO: Queue for Fediverse sync if opted-in
-                            Log.d(TAG, "Quest proof verified successfully. XP awarded: ${result.xpAward}")
+                    if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
+                        // Verification successful - persist to Room DB and award XP
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                questRepository.completeQuest(questId)
+                                playerRepository.addXP(amount = result.xpAward)
+                                
+                                withContext(Dispatchers.Main) {
+                                    playerProfile?.addXP(result.xpAward)
+                                    showSuccessDialog(result.xpAward)
+                                    Log.d(TAG, "Quest proof verified successfully. XP awarded: ${result.xpAward}")
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    showRetryDialog("Database error: ${e.message}")
+                                }
+                                Log.e(TAG, "Database error during quest completion", e)
+                            }
                         }
+                    } else {
+                        // Verification failed
+                        val reason = when {
+                            !result.gpsValid -> "GPS location mismatch"
+                            !result.timestampValid -> "Proof submitted outside time window"
+                            result.confidence < 0.85f -> "Image verification failed (confidence: ${result.confidence})"
+                            else -> "Verification failed"
+                        }
+                        showRetryDialog("Proof not verified. $reason. Try again?")
+                        Log.w(TAG, "Quest proof verification failed: $reason")
                     }
-                } else {
-                    // Verification failed
-                    val reason = when {
-                        !result.gpsValid -> "GPS location mismatch"
-                        !result.timestampValid -> "Proof submitted outside time window"
-                        result.confidence < 0.85f -> "Image verification failed (confidence: ${result.confidence})"
-                        else -> "Verification failed"
-                    }
-                    showRetryDialog("Proof not verified. $reason. Try again?")
-                    Log.w(TAG, "Quest proof verification failed: $reason")
                 }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    showRetryDialog("Error: ${e.message}")
+                }
+                Log.e(TAG, "Unexpected error during quest proof submission", e)
             }
         }
     }
