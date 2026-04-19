@@ -25,12 +25,21 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import org.fediquest.data.database.AppDatabase
+import org.fediquest.data.repository.QuestRepository
+import org.fediquest.data.repository.PlayerRepository
+import org.fediquest.companion.evolution.CompanionEvolutionManagerFactory
+import org.fediquest.fediverse.client.ActivityPubClientFactory
 
 /**
  * Main activity for FediQuest - Native AR First Approach
  *
  * This activity serves as the entry point for the FediQuest native Android app.
  * It defaults to native AR mode using SceneView (open-source Sceneform fork) as the primary AR engine.
+ * 
+ * Architecture Principles:
+ * - Offline-first: All core features work without internet
+ * - Opt-in AI/Fediverse: ML and social features are disabled by default
  */
 class MainActivity : AppCompatActivity() {
 
@@ -57,6 +66,12 @@ class MainActivity : AppCompatActivity() {
     
     // Current active quest ID (for proof submission)
     private var currentQuestId: String? = null
+    
+    // Database and repositories
+    private lateinit var database: AppDatabase
+    private lateinit var questRepository: QuestRepository
+    private lateinit var playerRepository: PlayerRepository
+    private lateinit var companionManager: org.fediquest.companion.evolution.CompanionEvolutionManager
 
     companion object {
         private const val TAG = "FediQuest"
@@ -66,6 +81,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         Log.d(TAG, "FediQuest starting in ${currentMode} mode")
+
+        // Initialize database and repositories
+        database = AppDatabase.getInstance(this)
+        questRepository = QuestRepository(database.questDao())
+        playerRepository = PlayerRepository(database.playerDao())
+        
+        // Initialize companion manager
+        companionManager = CompanionEvolutionManagerFactory.getInstance(this)
 
         // Initialize player profile
         initializePlayer()
@@ -180,6 +203,28 @@ class MainActivity : AppCompatActivity() {
             profile.questStats.recordQuestCompletion(questType)
 
             Log.d(TAG, "Quest completed: $questType, XP earned: $totalXP, New level: ${profile.level}")
+
+            // Update database
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    playerRepository.addXP(amount = totalXP)
+                    
+                    // Notify companion manager for evolution tracking
+                    val questEntity = org.fediquest.data.entity.QuestEntity(
+                        id = "temp_quest_${System.currentTimeMillis()}",
+                        title = questType,
+                        description = "",
+                        type = org.fediquest.data.entity.QuestType.valueOf(questType.uppercase()),
+                        locationLat = locationData.latitude,
+                        locationLng = locationData.longitude,
+                        radiusMeters = 50f,
+                        xpReward = totalXP
+                    )
+                    companionManager.onQuestCompleted(questEntity, totalXP)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating database after quest completion: ${e.message}")
+                }
+            }
 
             shareToFediverse(Config.FediverseActivity.QUEST_COMPLETED, questType)
         }

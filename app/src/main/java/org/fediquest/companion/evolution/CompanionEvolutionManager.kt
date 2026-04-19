@@ -3,10 +3,14 @@ package org.fediquest.companion.evolution
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.fediquest.companion.state.*
+import kotlinx.coroutines.launch
 import org.fediquest.data.entity.QuestEntity
+import org.fediquest.data.database.AppDatabase
+import org.fediquest.companion.state.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -126,7 +130,7 @@ class CompanionEvolutionManager(private val context: Context) {
     }
     
     /**
-     * Record evolution event
+     * Record evolution event and optionally share to ActivityPub
      */
     private fun recordEvolution(companion: CompanionState) {
         val record = CompanionEvolutionRecord(
@@ -143,8 +147,24 @@ class CompanionEvolutionManager(private val context: Context) {
         
         Log.i(TAG, "🎉 ${companion.name} evolved to ${companion.currentStage.displayName}!")
         
-        // TODO: Save evolution history to database
-        // TODO: Optionally share to ActivityPub if enabled
+        // Optionally share to ActivityPub if enabled (opt-in feature)
+        try {
+            val activityPubClient = org.fediquest.fediverse.client.ActivityPubClientFactory.getInstance(context)
+            if (activityPubClient.isFediverseEnabled()) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val event = org.fediquest.fediverse.activitypub.CompanionEvolutionEvent(
+                        companionId = companion.companionId,
+                        previousStage = record.previousStage.displayName,
+                        newStage = record.newStage.displayName,
+                        bondLevel = record.bondLevel,
+                        timestamp = java.time.Instant.now().toString()
+                    )
+                    activityPubClient.postCompanionEvolution(event)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to share evolution to Fediverse: ${e.message}")
+        }
     }
     
     /**
@@ -209,20 +229,42 @@ class CompanionEvolutionManager(private val context: Context) {
     }
     
     /**
-     * Save companion state (stub - would persist to Room DB)
+     * Save companion state to Room database
      */
     private fun saveCompanion(companion: CompanionState) {
-        // TODO: Implement persistence to Room database
-        // For now, just keep in memory
-        Log.d(TAG, "Saved companion: ${companion.name} (stage: ${companion.currentStage}, bond: ${companion.bondLevel})")
+        try {
+            val db = AppDatabase.getInstance(context)
+            val playerDao = db.playerDao()
+            
+            // Update player state with companion info
+            playerDao.updateCompanionStage(
+                userId = "local_player",
+                stage = companion.currentStage.ordinal,
+                timestamp = System.currentTimeMillis()
+            )
+            
+            Log.d(TAG, "Saved companion: ${companion.name} (stage: ${companion.currentStage}, bond: ${companion.bondLevel})")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save companion to database: ${e.message}")
+        }
     }
     
     /**
-     * Load all companions from storage (stub)
+     * Load all companions from Room database
      */
     fun loadAllCompanions() {
-        // TODO: Load from Room database
-        Log.d(TAG, "Loading companions from storage...")
+        try {
+            val db = AppDatabase.getInstance(context)
+            val playerState = db.playerDao().getPlayerStateOnce("local_player")
+            
+            playerState?.let { state ->
+                // Restore companion state from database
+                val stage = EvolutionStage.values().getOrElse(state.companionEvolutionStage) { EvolutionStage.EGG }
+                Log.d(TAG, "Loaded companion from storage: stage=$stage")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load companions from database: ${e.message}")
+        }
     }
     
     /**
