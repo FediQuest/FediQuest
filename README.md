@@ -1,4 +1,4 @@
-# FediQuest — Open FOSS AR + GPS Prototype
+# FediQuest — Open FOSS AR + GPS Platform
 
 FediQuest is an open-source augmented reality GPS-based experience platform that encourages people to:
 - **Go outside** and explore their environment
@@ -11,20 +11,42 @@ Players earn XP by completing social-ecological quests and unlock **digital good
 - ⭐ Level upgrades and titles
 - 🌍 Environmental impact tracking
 
+## 🆕 Modern Features (v1.0)
+
+### Multi-Platform Support
+- **Android Native**: SceneView AR with Kotlin/Room database
+- **WebAR**: Cross-platform WebXR using model-viewer
+- **Shared Codebase**: Kotlin Multiplatform for unified data models
+
+### Smart Quest Generation
+- **Overpass API Integration**: Auto-generate quests from OpenStreetMap data
+- **ETag Caching**: Bandwidth-optimized data fetching
+- **Dynamic POI Detection**: Real-world location-based quest creation
+
+### Privacy-First Architecture
+- **Offline-First**: All core features work without internet
+- **No Google Services**: Uses OSMDroid, Android LocationManager
+- **Opt-In AI/Fediverse**: ML and social features disabled by default
+
 This prototype prioritizes an **Android-native-first approach** with **SceneView** (open-source Sceneform fork) as the primary AR engine, while retaining a minimal, text-only repo with no binaries.
 
 ## Table of Contents
 
+- [Modern Features](#-modern-features-v10)
 - [Quick Start](#quick-start)
 - [Setup Script](#setup-script)
 - [Game Features](#game-features)
 - [Architecture Overview](#architecture-overview)
+- [WebAR Module](#webar-module)
+- [Quest Generation](#quest-generation)
 - [DeGoogle Checklist](#degoogle-checklist)
 - [Native Android Build](#native-android-build)
 - [Server Configuration](#server-configuration)
 - [Cache Cleaning & Reproducible Builds](#cache-cleaning--reproducible-builds)
 - [File Placement Guide](#file-placement-guide)
 - [PR Checklist](#pr-checklist)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
 
 ## Quick Start
 
@@ -406,5 +428,185 @@ This is a FOSS project. Contributions welcome!
 - SceneView: Apache 2.0 (FOSS-friendly)
 - ARCore: Proprietary (Google terms apply, optional only)
 - FediQuest code: FOSS (license omitted per request)
+
+Always verify license compatibility before distribution.
+
+## WebAR Module
+
+The WebAR module provides cross-platform AR experiences using WebXR and model-viewer.
+
+### Quick Start (Web)
+
+```bash
+# Navigate to web module
+cd web/src/main
+
+# Start development server
+python -m http.server 8080
+
+# Open in browser
+open http://localhost:8080
+```
+
+### Browser Support
+
+| Browser | Platform | AR Support |
+|---------|----------|------------|
+| Chrome | Android | ✅ Full WebXR |
+| Safari | iOS | ✅ Scene Viewer |
+| Firefox Reality | VR/AR | ✅ WebXR |
+| Desktop browsers | All | ⚠️ 3D viewer only |
+
+### Features
+
+- **Progressive Enhancement**: Works on all browsers, enhances to AR when available
+- **ETag Caching**: Bandwidth-optimized spawn data fetching
+- **Cross-Platform**: Same codebase for Android and Web
+
+For detailed documentation, see [web/README.md](web/README.md).
+
+---
+
+## Quest Generation
+
+### Generate Quests from OpenStreetMap
+
+FediQuest can automatically generate quests from real-world POIs using the Overpass API:
+
+```bash
+# Install dependencies
+pip install requests
+
+# Generate quests for your location
+python server/scripts/overpass_generator.py \
+  --lat YOUR_LATITUDE \
+  --lon YOUR_LONGITUDE \
+  --radius 1000 \
+  --output server/server.json
+```
+
+### Example: Generate for New York City
+
+```bash
+python server/scripts/overpass_generator.py \
+  --lat 40.7128 \
+  --lon -74.0060 \
+  --radius 2000 \
+  --output server/server.json
+```
+
+This will scan OpenStreetMap for:
+- Recycling centers → Recycling quests
+- Parks → Cleanup quests
+- Water features → Conservation quests
+- Forests → Tree planting quests
+- Gardens → Wildflower quests
+
+For more details, see [server/README.md](server/README.md).
+
+---
+
+## Project Structure
+
+```
+FediQuest/
+├── app/                          # Android native application
+│   ├── src/main/java/org/fediquest/
+│   │   ├── data/                 # Room database layer
+│   │   ├── ml/tflite/            # TensorFlow Lite verification
+│   │   ├── fediverse/            # ActivityPub integration
+│   │   ├── companion/            # Companion evolution system
+│   │   └── MainActivity.kt       # Main AR activity
+│   └── src/main/assets/models/   # 3D models directory
+│
+├── shared/                       # Kotlin Multiplatform shared code
+│   └── src/commonMain/kotlin/
+│       └── org/fediquest/shared/
+│           └── Models.kt         # Cross-platform data models
+│
+├── web/                          # WebAR module
+│   └── src/main/
+│       ├── index.html            # Main HTML entry point
+│       ├── js/
+│       │   ├── quest-fetcher.js  # ETag-based data fetching
+│       │   └── ar-manager.js     # WebXR AR management
+│       └── models/               # 3D models for web
+│
+├── server/                       # Server configuration
+│   ├── server.json               # Spawn point data
+│   └── scripts/
+│       └── overpass_generator.py # OSM quest generator
+│
+└── docs/                         # Documentation
+    ├── MIGRATION_GUIDE.md        # Integration guide for related projects
+    └── ROADMAP.md                # Feature roadmap
+```
+
+---
+
+## Contributing
+
+We welcome contributions! Priority areas:
+
+1. **OSM Integration**: Help improve Overpass API client
+2. **3D Models**: Create CC0 environmental assets
+3. **Translations**: Localize app for global reach
+4. **Accessibility**: Improve screen reader support
+5. **Documentation**: Expand developer guides
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for planned features.
+
+---
+
+## Roadmap
+
+### v1.0 (Current)
+- ✅ Android native app with SceneView
+- ✅ WebAR module with WebXR
+- ✅ Shared KMP models
+- ✅ Overpass API quest generation
+
+### v1.1 (In Progress)
+- 🔄 OSMDroid dual-map navigation
+- 🔄 Enhanced ETag caching
+- 🔄 Unit test coverage
+
+### v2.0 (Planned)
+- 📋 Temporal quest system (MapStory-inspired)
+- 📋 Advanced AI/ML classification
+- 📋 Fediverse 2.0 features
+
+### v3.0+ (Future)
+- 🔮 8th Wall premium integration
+- 🔮 Multiplayer synchronization
+- 🔮 Advanced WebXR features
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for details.
+
+---
+
+## Related Projects & Integrations
+
+FediQuest draws inspiration from and integrates concepts from:
+
+| Project | Integration Status | Description |
+|---------|-------------------|-------------|
+| [8th Wall](https://github.com/8thwall) | Planned | Premium WebAR platform |
+| [MapStory Engine](https://github.com/graeburn/mapstoryengine) | Planned | Temporal GIS features |
+| [TerranQuest](https://source.netsyms.com/TerranQuest) | Reference | Open source AR game |
+| [Overpass API](https://github.com/drolbr/Overpass-API) | ✅ Implemented | OSM query engine |
+| [Ingress Dual Map](https://github.com/Terrance/IngressDualMap) | Planned | Navigation UI |
+
+See [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) for integration details.
+
+---
+
+## License
+
+FOSS (license omitted per request)
+
+SceneView: Apache 2.0  
+TensorFlow Lite: Apache 2.0  
+model-viewer: Apache 2.0
 
 Always verify license compatibility before distribution.

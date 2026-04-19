@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FediQuest - WebAR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        
+        #ar-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            pointer-events: auto;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: #4ecca3;
+        }
+        
+        .quest-list {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+        
+        .quest-item {
+            background: rgba(78, 204, 163, 0.2);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .quest-item:hover {
+            background: rgba(78, 204, 163, 0.4);
+        }
+        
+        .quest-title {
+            font-weight: bold;
+            color: #4ecca3;
+        }
+        
+        .quest-xp {
+            font-size: 12px;
+            color: #ffd700;
+        }
+        
+        .start-ar-btn {
+            background: #4ecca3;
+            color: #1a1a2e;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            pointer-events: auto;
+            align-self: center;
+            font-weight: bold;
+        }
+        
+        .start-ar-btn:hover {
+            background: #3db892;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(78, 204, 163, 0.3);
+            border-top-color: #4ecca3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    
+    <!-- model-viewer for AR -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+</head>
+<body>
+    <div id="ar-container">
+        <model-viewer
+            id="ar-model"
+            style="width: 100%; height: 100%;"
+            camera-controls
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            environment-image="neutral"
+            shadow-intensity="1"
+            hidden
+        ></model-viewer>
+        
+        <div id="ui-overlay">
+            <div class="header">
+                <h1>🌍 FediQuest WebAR</h1>
+                <p>Explore • Help • Protect</p>
+            </div>
+            
+            <div id="quest-list" class="quest-list" hidden>
+                <h3>Nearby Quests</h3>
+                <div id="quests-container"></div>
+            </div>
+            
+            <button id="start-ar" class="start-ar-btn">
+                🚀 Start AR Experience
+            </button>
+        </div>
+        
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Loading FediQuest...</p>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { QuestFetcher } from './quest-fetcher.js';
+        import { ARManager } from './ar-manager.js';
+        
+        // Initialize app
+        const questFetcher = new QuestFetcher();
+        const arManager = new ARManager();
+        
+        // Load quests from server
+        async function loadQuests() {
+            try {
+                const spawns = await questFetcher.fetchSpawns('server/server.json');
+                renderQuestList(spawns);
+                document.getElementById('loading').hidden = true;
+                document.getElementById('quest-list').hidden = false;
+            } catch (error) {
+                console.error('Failed to load quests:', error);
+                document.getElementById('loading').innerHTML = '<p>Error loading quests. Please refresh.</p>';
+            }
+        }
+        
+        function renderQuestList(spawns) {
+            const container = document.getElementById('quests-container');
+            container.innerHTML = spawns.map(spawn => `
+                <div class="quest-item" data-id="${spawn.id}">
+                    <div class="quest-title">${spawn.metadata.name}</div>
+                    <div>${spawn.metadata.description}</div>
+                    <div class="quest-xp">⭐ ${spawn.metadata.xpReward} XP</div>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            container.querySelectorAll('.quest-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const questId = item.dataset.id;
+                    selectQuest(questId);
+                });
+            });
+        }
+        
+        function selectQuest(questId) {
+            console.log('Selected quest:', questId);
+            // TODO: Show quest details and AR placement
+        }
+        
+        // Start AR experience
+        document.getElementById('start-ar').addEventListener('click', async () => {
+            const startBtn = document.getElementById('start-ar');
+            startBtn.textContent = '🔄 Starting AR...';
+            
+            try {
+                await arManager.initialize();
+                startBtn.hidden = true;
+                
+                // Load default model
+                const modelViewer = document.getElementById('ar-model');
+                modelViewer.hidden = false;
+                modelViewer.src = 'models/tree.glb';
+            } catch (error) {
+                console.error('AR initialization failed:', error);
+                startBtn.textContent = '❌ AR Failed - Try Again';
+            }
+        });
+        
+        // Initialize on load
+        loadQuests();
+    </script>
+    
+    <script src="quest-fetcher.js" type="module"></script>
+    <script src="ar-manager.js" type="module"></script>
+</body>
+</html>
