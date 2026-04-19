@@ -6,8 +6,9 @@ import android.graphics.Bitmap
 import android.location.Location
 import android.util.Log
 import org.tensorflow.lite.task.vision.classifier.ImageClassifier
-import org.tensorflow.lite.task.vision.classifier.ImageClassifierOptions
-import org.tensorflow.lite.task.vision.core.TensorImage
+// TODO: ImageClassifierOptions and TensorImage deprecated in TF Lite Task Vision 0.4.x
+// import org.tensorflow.lite.task.vision.classifier.ImageClassifierOptions
+// import org.tensorflow.lite.task.vision.core.TensorImage
 import java.io.File
 
 /**
@@ -94,12 +95,9 @@ object QuestVerifier {
                 return
             }
             
-            val opts = ImageClassifierOptions.Builder()
-                .setMaxResults(3)
-                .setScoreThreshold(0.3f)
-                .build()
-            
-            classifier = ImageClassifier.createFromFileAndOptions(context, modelFile.absolutePath, opts)
+            // TODO: ImageClassifierOptions deprecated in TF Lite Task Vision 0.4.x
+            // Use createFromFile() with default options instead
+            classifier = ImageClassifier.createFromFile(context, modelFile.absolutePath)
             isModelLoaded = true
             Log.i(TAG, "✓ TF Lite model loaded successfully (${modelFile.length() / 1024} KB)")
         } catch (e: Exception) {
@@ -211,8 +209,9 @@ object QuestVerifier {
     private fun runImageClassification(image: Bitmap): Float {
         return if (isModelLoaded && classifier != null) {
             try {
-                val tensorImage = TensorImage.fromBitmap(image)
-                val results = classifier?.classify(tensorImage)
+                // TODO: TensorImage deprecated in TF Lite Task Vision 0.4.x
+                // Directly use Bitmap for classification instead
+                val results = classifier?.classify(image)
                 results?.maxOfOrNull { result ->
                     result.categories.maxOfOrNull { category -> category.score } ?: 0f
                 } ?: 0f

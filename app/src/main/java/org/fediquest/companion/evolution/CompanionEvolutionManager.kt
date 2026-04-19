@@ -102,9 +102,10 @@ class CompanionEvolutionManager(private val context: Context) {
     fun onQuestCompleted(quest: QuestEntity, xpEarned: Int) {
         val activeCompanion = _activeCompanionFlow.value ?: return
         
-        Log.d(TAG, "Companion ${activeCompanion.name} gained XP from quest: ${quest.type}")
+        Log.d(TAG, "Companion ${activeCompanion.name} gained XP from quest: ${quest.type.name}")
         
-        activeCompanion.addQuestExperience(xpEarned, quest.type)
+        // TODO: quest.type is now QuestType enum, convert to String for addQuestExperience
+        activeCompanion.addQuestExperience(xpEarned, quest.type.name)
         
         // Check if evolution occurred
         if (activeCompanion.evolutionCount > 0) {
@@ -236,12 +237,15 @@ class CompanionEvolutionManager(private val context: Context) {
             val db = AppDatabase.getInstance(context)
             val playerDao = db.playerDao()
             
-            // Update player state with companion info
-            playerDao.updateCompanionStage(
-                userId = "local_player",
-                stage = companion.currentStage.ordinal,
-                timestamp = System.currentTimeMillis()
-            )
+            // TODO: updateCompanionStage removed, use new updateCompanion API with coroutines
+            // PlayerDao now has: suspend fun updateCompanion(userId, companionId, evolutionStage)
+            kotlinx.coroutines.runBlocking {
+                playerDao.updateCompanion(
+                    userId = "local_player",
+                    companionId = companion.companionId,
+                    evolutionStage = companion.currentStage.ordinal
+                )
+            }
             
             Log.d(TAG, "Saved companion: ${companion.name} (stage: ${companion.currentStage}, bond: ${companion.bondLevel})")
         } catch (e: Exception) {
@@ -255,7 +259,10 @@ class CompanionEvolutionManager(private val context: Context) {
     fun loadAllCompanions() {
         try {
             val db = AppDatabase.getInstance(context)
-            val playerState = db.playerDao().getPlayerStateOnce("local_player")
+            // TODO: getPlayerStateOnce removed, use getPlayerStateSync with runBlocking
+            val playerState = kotlinx.coroutines.runBlocking {
+                db.playerDao().getPlayerStateSync("local_player")
+            }
             
             playerState?.let { state ->
                 // Restore companion state from database

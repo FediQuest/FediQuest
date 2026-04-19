@@ -173,7 +173,8 @@ class MainActivity : AppCompatActivity() {
     private fun handleTapOnScreen(x: Float, y: Float) {
         try {
             // Perform hit test to find surfaces in the real world
-            val hitResult = arSceneView.hitTest(x, y).firstOrNull()
+            // SceneView 4.x API: requires plane, depth, instant parameters
+            val hitResult = arSceneView.hitTest(x, y, plane = true, depth = true, instant = false)
 
             hitResult?.let { hit ->
                 Log.d(TAG, "Hit detected at: ${hit.distance}m")
@@ -218,7 +219,8 @@ class MainActivity : AppCompatActivity() {
                         locationLat = locationData.latitude,
                         locationLng = locationData.longitude,
                         radiusMeters = 50f,
-                        xpReward = totalXP
+                        xpReward = totalXP,
+                        imageUrl = null // TODO: Add image URL parameter when available
                     )
                     companionManager.onQuestCompleted(questEntity, totalXP)
                 } catch (e: Exception) {
@@ -337,7 +339,7 @@ class MainActivity : AppCompatActivity() {
                 photoFile.delete()
             }
 
-            override fun onError(exception: ImageCaptureException, imageProxy: ImageProxy?) {
+            override fun onError(exception: androidx.camera.core.ImageCaptureException) {
                 Log.e(TAG, "Error capturing image: ${exception.message}", exception)
                 showRetryDialog("Failed to capture image. Try again?")
             }
@@ -374,7 +376,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Activity resumed")
 
         try {
-            arSceneView.onResume()
+            arSceneView.onResume(owner = this)
         } catch (e: Exception) {
             Log.e(TAG, "Error resuming AR session: ${e.message}", e)
         }
@@ -385,7 +387,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Activity paused")
 
         try {
-            arSceneView.onPause()
+            arSceneView.onPause(owner = this)
         } catch (e: Exception) {
             Log.e(TAG, "Error pausing AR session: ${e.message}", e)
         }
@@ -396,7 +398,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Activity destroyed")
 
         try {
-            arSceneView.onDestroy()
+            arSceneView.onDestroy(owner = this)
         } catch (e: Exception) {
             Log.e(TAG, "Error destroying AR session: ${e.message}", e)
         }
