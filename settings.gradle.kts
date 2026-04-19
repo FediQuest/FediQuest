@@ -14,6 +14,11 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
         maven { url = uri("https://maven.mozilla.org/maven2/") } // Mozilla WebXR
     }
+    versionCatalogs {
+        create("libs") {
+            from(files("gradle/libs.versions.toml"))
+        }
+    }
 }
 
 rootProject.name = "FediQuest"

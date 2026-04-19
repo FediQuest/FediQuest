@@ -1,6 +1,6 @@
 // Web module build configuration for FediQuest WebAR
 plugins {
-    id("org.jetbrains.kotlin.js") version "1.9.22"
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
 kotlin {
