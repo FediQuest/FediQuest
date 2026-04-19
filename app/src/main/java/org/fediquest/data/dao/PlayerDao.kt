@@ -1,4 +1,4 @@
-// File: app/src/main/java/org/fediquest/data/dao/PlayerDao.kt
+// app/src/main/java/org/fediquest/data/dao/PlayerDao.kt
 package org.fediquest.data.dao
 
 import androidx.room.*
@@ -6,51 +6,114 @@ import kotlinx.coroutines.flow.Flow
 import org.fediquest.data.entity.PlayerStateEntity
 
 /**
- * Player State Data Access Object
+ * Data Access Object for player state operations.
+ * All queries are validated at compile-time by Room/KSP.
  * 
- * Provides database operations for player state tracking.
- * All operations work offline-first with local Room database.
+ * ✅ Fixed: All queries now reference the 'updatedAt' column correctly.
  */
 @Dao
 interface PlayerDao {
     
-    @Query("SELECT * FROM player_state WHERE userId = :userId LIMIT 1")
-    fun getPlayerState(userId: String): Flow<PlayerStateEntity?>
+    // === READ OPERATIONS ===
     
-    @Query("SELECT * FROM player_state WHERE userId = :userId LIMIT 1")
-    suspend fun getPlayerStateOnce(userId: String): PlayerStateEntity?
+    /**
+     * Observe player state changes reactively (Flow).
+     */
+    @Query("SELECT * FROM player_state WHERE userId = :userId")
+    fun getPlayerState(userId: String): Flow<PlayerStateEntity>
     
+    /**
+     * Get player state synchronously (for one-off reads).
+     */
+    @Query("SELECT * FROM player_state WHERE userId = :userId LIMIT 1")
+    suspend fun getPlayerStateSync(userId: String): PlayerStateEntity?
+    
+    /**
+     * ✅ FIXED: Query players updated since a timestamp (for Fediverse sync).
+     */
+    @Query("SELECT * FROM player_state WHERE updatedAt > :since ORDER BY updatedAt DESC")
+    fun getRecentlyUpdated(since: Long): Flow<List<PlayerStateEntity>>
+    
+    /**
+     * Get all players for leaderboard (local-only for demo).
+     */
+    @Query("SELECT * FROM player_state ORDER BY totalXP DESC LIMIT :limit")
+    fun getTopPlayers(limit: Int): Flow<List<PlayerStateEntity>>
+    
+    // === WRITE OPERATIONS ===
+    
+    /**
+     * Insert or replace player state (idempotent upsert).
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrReplace(playerState: PlayerStateEntity)
+    suspend fun insertOrUpdate(player: PlayerStateEntity)
     
+    /**
+     * Update existing player state (fails if not exists).
+     */
     @Update
-    suspend fun update(playerState: PlayerStateEntity)
+    suspend fun update(player: PlayerStateEntity)
     
-    @Query("UPDATE player_state SET totalXP = :totalXP, level = :level, updatedAt = :timestamp WHERE userId = :userId")
-    suspend fun updateXP(
+    /**
+     * ✅ FIXED: Update only the timestamp (for sync tracking).
+     */
+    @Query("UPDATE player_state SET updatedAt = :timestamp WHERE userId = :userId")
+    suspend fun updateTimestamp(userId: String, timestamp: Long)
+    
+    /**
+     * Add XP and auto-level if threshold reached.
+     */
+    @Transaction
+    suspend fun addXP(userId: String, xpAmount: Int): PlayerStateEntity {
+        val current = getPlayerStateSync(userId) 
+            ?: PlayerStateEntity(userId = userId)
+        
+        val newXP = current.totalXP + xpAmount
+        val newLevel = if (newXP >= current.nextLevelThreshold()) {
+            current.level + 1
+        } else current.level
+        
+        val updated = current.copy(
+            totalXP = newXP,
+            level = newLevel,
+            updatedAt = System.currentTimeMillis()
+        )
+        insertOrUpdate(updated)
+        return updated
+    }
+    
+    /**
+     * Update companion evolution state.
+     */
+    @Transaction
+    suspend fun updateCompanion(
         userId: String,
-        totalXP: Int,
-        level: Int,
-        timestamp: Long = System.currentTimeMillis()
-    )
+        companionId: String,
+        evolutionStage: Int
+    ): PlayerStateEntity {
+        val current = getPlayerStateSync(userId)
+            ?: PlayerStateEntity(userId = userId)
+        
+        val updated = current.copy(
+            companionId = companionId,
+            companionEvolutionStage = evolutionStage,
+            updatedAt = System.currentTimeMillis()
+        )
+        insertOrUpdate(updated)
+        return updated
+    }
     
-    @Query("UPDATE player_state SET totalXP = totalXP + :amount, updatedAt = :timestamp WHERE userId = :userId")
-    suspend fun addXP(
-        userId: String,
-        amount: Int,
-        timestamp: Long = System.currentTimeMillis()
-    )
+    // === DELETE OPERATIONS ===
     
-    @Query("UPDATE player_state SET companionEvolutionStage = :stage, lastQuestCompletedAt = :timestamp WHERE userId = :userId")
-    suspend fun updateCompanionStage(
-        userId: String,
-        stage: Int,
-        timestamp: Long = System.currentTimeMillis()
-    )
+    /**
+     * Delete player state (for reset/testing).
+     */
+    @Query("DELETE FROM player_state WHERE userId = :userId")
+    suspend fun delete(userId: String)
     
-    @Query("UPDATE player_state SET avatarSkinId = :skinId WHERE userId = :userId")
-    suspend fun updateAvatarSkin(userId: String, skinId: String)
-    
-    @Query("SELECT * FROM player_state ORDER BY totalXP DESC LIMIT 10")
-    fun getTopPlayers(): Flow<List<PlayerStateEntity>>
+    /**
+     * Delete all player data (factory reset).
+     */
+    @Query("DELETE FROM player_state")
+    suspend fun deleteAll()
 }
