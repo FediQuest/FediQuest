@@ -18,5 +18,6 @@ data class PlayerStateEntity(
     val avatarSkinId: String = "default",
     val companionId: String = "starter",
     val companionEvolutionStage: Int = 0,
-    val lastQuestCompletedAt: Long? = null
+    val lastQuestCompletedAt: Long? = null,
+    val updatedAt: Long = System.currentTimeMillis()
 )
