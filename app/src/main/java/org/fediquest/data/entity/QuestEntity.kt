@@ -1,33 +1,34 @@
 // File: app/src/main/java/org/fediquest/data/entity/QuestEntity.kt
 package org.fediquest.data.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Quest Entity for Room Database
- * 
- * Represents a social-ecological quest in the local database.
- * Offline-first: quests are cached locally and synced when online.
+ * Quest Entity
+ * Represents a location-based AR quest with verification requirements.
  */
-enum class QuestType {
-    SOCIAL,         // Community engagement quests
-    ECOLOGICAL,     // Environmental action quests
-    CREATIVE        // Artistic/creative expression quests
-}
-
 @Entity(tableName = "quests")
 data class QuestEntity(
     @PrimaryKey val id: String,
-    val title: String,
-    val description: String,
-    val type: QuestType, // ENUM: SOCIAL, ECOLOGICAL, CREATIVE
-    val locationLat: Double,
-    val locationLng: Double,
-    val radiusMeters: Float = 50f,
-    val xpReward: Int,
-    val imageUrl: String?,
-    val isCompleted: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val fediverseSynced: Boolean = false // For ActivityPub queue
+    @ColumnInfo(name = "title") val title: String,
+    @ColumnInfo(name = "description") val description: String,
+    @ColumnInfo(name = "type") val type: QuestType,
+    @ColumnInfo(name = "locationLat") val locationLat: Double,
+    @ColumnInfo(name = "locationLng") val locationLng: Double,
+    @ColumnInfo(name = "radiusMeters") val radiusMeters: Float,
+    @ColumnInfo(name = "xpReward") val xpReward: Int,
+    @ColumnInfo(name = "imageUrl") val imageUrl: String? = null,
+    @ColumnInfo(name = "createdAt") val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "completedAt") val completedAt: Long? = null,
+    @ColumnInfo(name = "isCompleted") val isCompleted: Boolean = false
 )
+
+enum class QuestType {
+    ECO_CLEANUP,
+    TREE_PLANTING,
+    WILDLIFE_SPOTTING,
+    COMMUNITY_SERVICE,
+    EDUCATIONAL
+}
