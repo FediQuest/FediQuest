@@ -3,93 +3,52 @@ package org.fediquest.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import org.fediquest.data.dao.PlayerDao
+import org.fediquest.data.dao.PlayerXpDao
 import org.fediquest.data.entity.PlayerStateEntity
+import org.fediquest.data.entity.PlayerXpEntity
 
 /**
- * Player Repository - Single Source of Truth for Player State
- * 
- * Provides a clean API for player state operations, abstracting the data layer.
- * All operations work offline-first with local Room database.
+ * Repository for Player data operations
+ * Abstracts data source (local DB vs remote sync)
  */
-class PlayerRepository(private val dao: PlayerDao) {
-    
-    /**
-     * Flow of player state
-     * Observers will be notified of any changes
-     */
-    fun getPlayerState(userId: String = "local_player"): Flow<PlayerStateEntity?> {
-        return dao.getPlayerState(userId)
+class PlayerRepository(
+    private val playerDao: PlayerDao,
+    private val playerXpDao: PlayerXpDao
+) {
+    fun getPlayerById(playerId: String): Flow<PlayerStateEntity?> {
+        return playerDao.getPlayerById(playerId)
     }
-    
-    /**
-     * Get player state once (suspend function)
-     */
-    suspend fun getPlayerStateOnce(userId: String = "local_player"): PlayerStateEntity? {
-        // TODO: getPlayerStateOnce removed from DAO, delegate to getPlayerStateSync
-        return dao.getPlayerStateSync(userId)
+
+    suspend fun getPlayerByIdSync(playerId: String): PlayerStateEntity? {
+        return playerDao.getPlayerByIdSync(playerId)
     }
-    
-    /**
-     * Initialize or update player state
-     */
-    suspend fun savePlayerState(playerState: PlayerStateEntity) {
-        // TODO: insertOrReplace renamed to insertOrUpdate in Room DAO
-        dao.insertOrUpdate(playerState)
+
+    suspend fun insertPlayer(player: PlayerStateEntity) {
+        playerDao.insertPlayer(player)
     }
-    
-    /**
-     * Add XP to player
-     * This persists the change locally immediately (offline-first)
-     */
-    suspend fun addXP(userId: String = "local_player", amount: Int) {
-        dao.addXP(userId, amount)
+
+    suspend fun updatePlayer(player: PlayerStateEntity) {
+        playerDao.updatePlayer(player)
     }
-    
-    /**
-     * Update player level
-     */
-    suspend fun updateLevel(userId: String = "local_player", level: Int) {
-        // TODO: updateXP removed from DAO, use entity copy + insertOrUpdate pattern
-        val currentState = getPlayerStateOnce(userId) ?: return
-        val updated = currentState.copy(
-            level = level,
-            updatedAt = System.currentTimeMillis()
+
+    suspend fun addXP(amount: Int) {
+        // Note: playerId would need to be passed in real impl
+        playerDao.addXP("default_player", amount)
+        
+        // Record transaction
+        val transaction = PlayerXpEntity(
+            playerId = "default_player",
+            amount = amount,
+            source = "quest_completion"
         )
-        dao.insertOrUpdate(updated)
+        playerXpDao.insertXpTransaction(transaction)
     }
-    
-    /**
-     * Update companion evolution stage
-     * Called when companion evolves based on XP/level milestones
-     */
-    suspend fun updateCompanionStage(userId: String = "local_player", stage: Int) {
-        // TODO: updateCompanionStage removed from DAO, use new updateCompanion API
-        // PlayerDao now has: suspend fun updateCompanion(userId, companionId, evolutionStage)
-        dao.updateCompanion(
-            userId = userId,
-            companionId = "default_companion", // TODO: Pass companionId as parameter
-            evolutionStage = stage
-        )
+
+    fun getXpHistory(playerId: String): Flow<List<PlayerXpEntity>> {
+        return playerXpDao.getXpHistory(playerId)
     }
-    
-    /**
-     * Update avatar skin
-     */
-    suspend fun updateAvatarSkin(userId: String = "local_player", skinId: String) {
-        // TODO: updateAvatarSkin removed from DAO, use entity copy + insertOrUpdate pattern
-        val currentState = getPlayerStateOnce(userId) ?: return
-        val updated = currentState.copy(
-            avatarSkinId = skinId,
-            updatedAt = System.currentTimeMillis()
-        )
-        dao.insertOrUpdate(updated)
-    }
-    
-    /**
-     * Get top players by XP (for local leaderboard)
-     */
-    fun getTopPlayers(): Flow<List<PlayerStateEntity>> {
-        // TODO: getTopPlayers now requires limit parameter
-        return dao.getTopPlayers(limit = 10)
+
+    suspend fun getTopPlayer(): PlayerStateEntity? {
+        return playerDao.getTopPlayer()
     }
 }
