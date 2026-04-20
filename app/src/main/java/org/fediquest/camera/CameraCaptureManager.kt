@@ -177,23 +177,19 @@ class CameraCaptureManager(private val context: Context) {
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    try {
-                        val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
-                            ?: throw IllegalStateException("Failed to decode captured image")
-                        
-                        // Rotate bitmap if needed
-                        val rotatedBitmap = rotateBitmap(bitmap, 0) // TODO: Get actual rotation from metadata
-                        
-                        onSuccess(rotatedBitmap)
-                        
-                        // Clean up temp file
-                        photoFile.delete()
-                        
-                        Log.d(TAG, "Image captured successfully: ${photoFile.absolutePath}")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error processing captured image: ${e.message}", e)
-                        onError(e)
+                    Log.d(TAG, "Image captured successfully")
+                    
+                    // Load the captured image as bitmap
+                    val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
+                    
+                    if (bitmap != null) {
+                        onSuccess(bitmap)
+                    } else {
+                        onError(Exception("Failed to decode captured image"))
                     }
+                    
+                    // Clean up temporary file
+                    photoFile.delete()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -205,159 +201,25 @@ class CameraCaptureManager(private val context: Context) {
     }
 
     /**
-     * Capture and classify image with confidence threshold check
-     * Returns result with classification confidence and whether it passed threshold
+     * Get current confidence threshold
      */
-    fun captureAndClassify(
-        classifier: (Bitmap) -> ClassificationResult,
-        onResult: (CaptureWithClassificationResult) -> Unit,
-        onError: (Exception) -> Unit
-    ) {
-        captureImage(
-            onSuccess = { bitmap ->
-                try {
-                    // Run classification
-                    val classificationResult = classifier(bitmap)
-                    
-                    // Check confidence threshold
-                    val passedThreshold = classificationResult.confidence >= currentConfidenceThreshold
-                    
-                    val result = CaptureWithClassificationResult(
-                        bitmap = bitmap,
-                        confidence = classificationResult.confidence,
-                        label = classificationResult.label,
-                        passedThreshold = passedThreshold,
-                        threshold = currentConfidenceThreshold
-                    )
-                    
-                    Log.d(TAG, "Classification result: confidence=${classificationResult.confidence}, " +
-                             "passed=$passedThreshold, threshold=$currentConfidenceThreshold")
-                    
-                    onResult(result)
-                    
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error during classification: ${e.message}", e)
-                    onError(e)
-                }
-            },
-            onError = onError
-        )
+    fun getCurrentConfidenceThreshold(): Float {
+        return currentConfidenceThreshold
     }
 
     /**
-     * Set confidence threshold for classification
+     * Set confidence threshold for classification acceptance
      */
     fun setConfidenceThreshold(threshold: Float) {
-        require(threshold in 0.0f..1.0f) { "Confidence threshold must be between 0.0 and 1.0" }
         currentConfidenceThreshold = threshold
         Log.d(TAG, "Confidence threshold set to: $threshold")
     }
 
     /**
-     * Get current confidence threshold
+     * Check if camera is ready for capture
      */
-    fun getConfidenceThreshold(): Float = currentConfidenceThreshold
-
-    /**
-     * Start continuous image analysis for real-time classification
-     */
-    fun startContinuousAnalysis(
-        classifier: (Bitmap) -> ClassificationResult,
-        onResult: (ClassificationResult) -> Unit
-    ) {
-        imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
-            try {
-                val bitmap = imageProxy.toBitmap()
-                val result = classifier(bitmap)
-                
-                // Only emit results above minimum threshold to reduce noise
-                if (result.confidence >= LOW_CONFIDENCE_THRESHOLD) {
-                    onResult(result)
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in continuous analysis: ${e.message}", e)
-            } finally {
-                imageProxy.close()
-            }
-        }
-        
-        Log.d(TAG, "Started continuous image analysis")
-    }
-
-    /**
-     * Stop continuous analysis
-     */
-    fun stopContinuousAnalysis() {
-        imageAnalyzer?.clearAnalyzer()
-        Log.d(TAG, "Stopped continuous image analysis")
-    }
-
-    /**
-     * Convert ImageProxy to Bitmap
-     */
-    private fun ImageProxy.toBitmap(): Bitmap {
-        val yBuffer = planes[0].buffer
-        val uBuffer = planes[1].buffer
-        val vBuffer = planes[2].buffer
-
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-
-        val nv21 = ByteArray(ySize + uSize + vSize)
-
-        yBuffer.get(nv21, 0, ySize)
-        vBuffer.get(nv21, ySize, vSize)
-        uBuffer.get(nv21, ySize + vSize, uSize)
-
-        val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
-        val outputStream = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, outputStream)
-        
-        val jpegBytes = outputStream.toByteArray()
-        val bitmap = android.graphics.BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
-        
-        // Apply rotation and crop
-        return rotateAndCropBitmap(bitmap, rotationDegrees, cropRect)
-    }
-
-    /**
-     * Rotate and crop bitmap to match image proxy
-     */
-    private fun rotateAndCropBitmap(bitmap: Bitmap, rotationDegrees: Int, cropRect: Rect?): Bitmap {
-        var processedBitmap = bitmap
-        
-        // Rotate if needed
-        if (rotationDegrees != 0) {
-            val matrix = Matrix().apply {
-                postRotate(rotationDegrees.toFloat())
-            }
-            processedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        }
-
-        // Crop if rect provided
-        cropRect?.let { rect ->
-            if (rect.left >= 0 && rect.top >= 0 && rect.right <= processedBitmap.width && 
-                rect.bottom <= processedBitmap.height) {
-                processedBitmap = Bitmap.createBitmap(processedBitmap, rect.left, rect.top, 
-                    rect.width(), rect.height())
-            }
-        }
-
-        return processedBitmap
-    }
-
-    /**
-     * Rotate bitmap by specified degrees
-     */
-    private fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {
-        if (degrees == 0) return bitmap
-        
-        val matrix = Matrix().apply {
-            postRotate(degrees.toFloat())
-        }
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    fun isReady(): Boolean {
+        return isInitialized && camera != null
     }
 
     /**
@@ -365,33 +227,13 @@ class CameraCaptureManager(private val context: Context) {
      */
     fun release() {
         try {
-            stopContinuousAnalysis()
             cameraProvider?.unbindAll()
-            cameraExecutor.shutdown()
+            cameraProvider = null
+            cameraExecutor.shutdownNow()
             isInitialized = false
             Log.d(TAG, "Camera resources released")
         } catch (e: Exception) {
-            Log.e(TAG, "Error releasing camera: ${e.message}", e)
+            Log.e(TAG, "Error releasing camera resources: ${e.message}", e)
         }
     }
 }
-
-/**
- * Classification result data class
- */
-data class ClassificationResult(
-    val confidence: Float,
-    val label: String,
-    val allScores: Map<String, Float> = emptyMap()
-)
-
-/**
- * Capture result with classification data
- */
-data class CaptureWithClassificationResult(
-    val bitmap: Bitmap,
-    val confidence: Float,
-    val label: String,
-    val passedThreshold: Boolean,
-    val threshold: Float
-)
