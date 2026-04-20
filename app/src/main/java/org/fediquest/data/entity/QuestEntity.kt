@@ -1,33 +1,24 @@
-// File: app/src/main/java/org/fediquest/data/entity/QuestEntity.kt
 package org.fediquest.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/**
- * Quest Entity for Room Database
- * 
- * Represents a social-ecological quest in the local database.
- * Offline-first: quests are cached locally and synced when online.
- */
-enum class QuestType {
-    SOCIAL,         // Community engagement quests
-    ECOLOGICAL,     // Environmental action quests
-    CREATIVE        // Artistic/creative expression quests
-}
-
 @Entity(tableName = "quests")
 data class QuestEntity(
-    @PrimaryKey val id: String,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val questId: String,
     val title: String,
     val description: String,
-    val type: QuestType, // ENUM: SOCIAL, ECOLOGICAL, CREATIVE
-    val locationLat: Double,
-    val locationLng: Double,
-    val radiusMeters: Float = 50f,
-    val xpReward: Int,
-    val imageUrl: String?,
+    val locationLatitude: Double,
+    val locationLongitude: Double,
+    val locationAltitude: Double,
+    val difficulty: Int = 1,
+    val rewardExperience: Long = 100L,
+    val rewardItem: String? = null,
     val isCompleted: Boolean = false,
+    val completedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val fediverseSynced: Boolean = false // For ActivityPub queue
+    val updatedAt: Long = 0L,
+    val syncedAt: Long? = null
 )
