@@ -7,10 +7,6 @@ import android.location.Location
 import android.util.Log
 import org.tensorflow.lite.task.vision.classifier.ImageClassifier
 import org.tensorflow.lite.task.vision.core.MlImage
-
-// TODO: ImageClassifierOptions and TensorImage deprecated in TF Lite Task Vision 0.4.x
-// import org.tensorflow.lite.task.vision.classifier.ImageClassifierOptions
-// import org.tensorflow.lite.task.vision.core.TensorImage
 import java.io.File
 
 /**
@@ -97,7 +93,6 @@ object QuestVerifier {
                 return
             }
             
-            // TODO: ImageClassifierOptions deprecated in TF Lite Task Vision 0.4.x
             // Use createFromFile() with default options instead
             classifier = ImageClassifier.createFromFile(context, modelFile.absolutePath)
             isModelLoaded = true
@@ -211,7 +206,6 @@ object QuestVerifier {
     private fun runImageClassification(image: Bitmap): Float {
         return if (isModelLoaded && classifier != null) {
             try {
-                // TODO: TensorImage deprecated in TF Lite Task Vision 0.4.x
                 // Use MlImage.Builder for direct Bitmap classification
                 val mlImage = MlImage.fromBitmap(image)
                 val results = classifier?.classify(mlImage)
