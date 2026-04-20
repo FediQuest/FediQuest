@@ -1,28 +1,94 @@
-```
-# Dependencies
+# FediQuest Android .gitignore
+# Comprehensive ignore rules for Android development, IDEs, and build artifacts
+
+######################
+# Gradle Build System
+######################
 .gradle/
-node_modules/
+gradle-app.setting
+!gradle-wrapper.jar
+!**/gradle-wrapper.jar
 
-# Build artifacts
+######################
+# Build Artifacts
+######################
 build/
+*/build/
+**/build/
 dist/
+out/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.jar
+*.war
+*.ear
 
-# IDE files
-.vscode/
+######################
+# Local Configuration
+######################
+local.properties
+secrets.properties
+*.keystore
+*.jks
+*.p12
+google-services.json
+firebase-app.json
+
+######################
+# IDE Files
+######################
+# Android Studio / IntelliJ IDEA
 .idea/
-*.swp
-*.swo
-*.tmp
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+.DS_Store
 
-# Logs
+# VS Code
+.vscode/
+.settings/
+.project
+.classpath
+
+# Eclipse
+.apt_generated/
+.bin/
+.fabfile.py
+
+######################
+# NDK & Native Builds
+######################
+.externalNativeBuild/
+.cxx/
+*.so
+*.a
+*.o
+*.obj
+
+######################
+# Logs & Debug
+######################
 *.log
+logs/
+hs_err_pid*
+replay.log
+.java-buildpack.log
 
-# Environment
+######################
+# Environment Files
+######################
 .env
 .env.local
+.env.*.local
 *.env.*
 
-# Python
+######################
+# Python & Scripts
+######################
 __pycache__/
 *.pyc
 *.pyo
@@ -30,13 +96,73 @@ __pycache__/
 .Python
 venv/
 .venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Coverage reports
+######################
+# Coverage Reports
+######################
 coverage/
 htmlcov/
 .coverage
+.coverage.*
+*.gcda
+*.gcno
+jacoco/
 
-# OS generated files
+######################
+# OS Generated Files
+######################
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-```
+Desktop.ini
+
+######################
+# Temporary Files
+######################
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
+
+######################
+# Sensitive Data
+######################
+*.key
+*.pem
+*.crt
+*.csr
+*.pfx
+security/
+credentials/
+
+######################
+# Test & Mock Data
+######################
+test-results/
+test-output/
+mock_data/
+fixtures/
+
+######################
+# Documentation Build
+######################
+docs/_build/
+site/
+public/
+
+######################
+# Misc
+######################
+.hg/
+.svn/
+CVS/
