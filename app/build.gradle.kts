@@ -138,9 +138,6 @@ dependencies {
     // Lottie animations
     implementation(libs.lottie)
 
-    // Location (optional, for enhanced GPS)
-    // implementation(libs.play.services.location)
-
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
