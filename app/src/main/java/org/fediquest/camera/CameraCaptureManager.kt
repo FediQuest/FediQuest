@@ -3,18 +3,12 @@ package org.fediquest.camera
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.ImageFormat
-import android.graphics.Matrix
-import android.graphics.Rect
-import android.graphics.YuvImage
 import android.util.Log
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -29,13 +23,9 @@ class CameraCaptureManager(private val context: Context) {
 
     companion object {
         private const val TAG = "FediQuest.CameraCapture"
-        
-        // Confidence threshold for accepting classification results
         const val DEFAULT_CONFIDENCE_THRESHOLD = 0.75f
         const val HIGH_CONFIDENCE_THRESHOLD = 0.90f
         const val LOW_CONFIDENCE_THRESHOLD = 0.50f
-        
-        // Image processing constants
         const val DEFAULT_IMAGE_WIDTH = 640
         const val DEFAULT_IMAGE_HEIGHT = 480
     }
@@ -53,9 +43,6 @@ class CameraCaptureManager(private val context: Context) {
     private var isInitialized = false
     private var currentConfidenceThreshold = DEFAULT_CONFIDENCE_THRESHOLD
 
-    /**
-     * Initialize camera components
-     */
     fun initialize(
         previewView: PreviewView,
         lifecycleOwner: LifecycleOwner,
@@ -74,18 +61,15 @@ class CameraCaptureManager(private val context: Context) {
                 try {
                     cameraProvider = cameraProviderFuture.get()
                     
-                    // Set up preview
                     preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
 
-                    // Set up image capture
                     imageCapture = ImageCapture.Builder()
                         .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                         .setTargetResolution(android.util.Size(DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT))
                         .build()
 
-                    // Set up image analysis for real-time classification
                     imageAnalyzer = ImageAnalysis.Builder()
                         .setTargetResolution(android.util.Size(DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT))
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -107,9 +91,6 @@ class CameraCaptureManager(private val context: Context) {
         }
     }
 
-    /**
-     * Bind camera to lifecycle
-     */
     private fun bindToLifecycle(
         lifecycleOwner: LifecycleOwner,
         onCaptureSuccess: (Bitmap) -> Unit,
@@ -126,7 +107,6 @@ class CameraCaptureManager(private val context: Context) {
                 imageAnalyzer
             )
 
-            // Set up capture callback
             setupCaptureCallbacks(onCaptureSuccess, onCaptureError)
             
             Log.d(TAG, "Camera bound to lifecycle")
@@ -136,22 +116,14 @@ class CameraCaptureManager(private val context: Context) {
         }
     }
 
-    /**
-     * Set up capture callbacks
-     */
     private fun setupCaptureCallbacks(
         onCaptureSuccess: (Bitmap) -> Unit,
         onCaptureError: (Exception) -> Unit
     ) {
-        // Image analysis callback for real-time classification
         imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
             try {
                 val bitmap = imageProxy.toBitmap()
-                
-                // Perform classification here (caller will handle ML)
-                // For now, just pass the bitmap through
-                // In full implementation, call QuestVerifier.runImageClassification(bitmap)
-                
+                // Classification handled externally
             } catch (e: Exception) {
                 Log.e(TAG, "Error analyzing image: ${e.message}", e)
             } finally {
@@ -160,9 +132,6 @@ class CameraCaptureManager(private val context: Context) {
         }
     }
 
-    /**
-     * Capture a single image for quest proof
-     */
     fun captureImage(onSuccess: (Bitmap) -> Unit, onError: (Exception) -> Unit) {
         if (!isInitialized) {
             onError(IllegalStateException("Camera not initialized"))
@@ -179,7 +148,6 @@ class CameraCaptureManager(private val context: Context) {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     Log.d(TAG, "Image captured successfully")
                     
-                    // Load the captured image as bitmap
                     val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
                     
                     if (bitmap != null) {
@@ -188,7 +156,6 @@ class CameraCaptureManager(private val context: Context) {
                         onError(Exception("Failed to decode captured image"))
                     }
                     
-                    // Clean up temporary file
                     photoFile.delete()
                 }
 
@@ -200,31 +167,15 @@ class CameraCaptureManager(private val context: Context) {
         )
     }
 
-    /**
-     * Get current confidence threshold
-     */
-    fun getCurrentConfidenceThreshold(): Float {
-        return currentConfidenceThreshold
-    }
+    fun getCurrentConfidenceThreshold(): Float = currentConfidenceThreshold
 
-    /**
-     * Set confidence threshold for classification acceptance
-     */
     fun setConfidenceThreshold(threshold: Float) {
         currentConfidenceThreshold = threshold
         Log.d(TAG, "Confidence threshold set to: $threshold")
     }
 
-    /**
-     * Check if camera is ready for capture
-     */
-    fun isReady(): Boolean {
-        return isInitialized && camera != null
-    }
+    fun isReady(): Boolean = isInitialized && camera != null
 
-    /**
-     * Release camera resources
-     */
     fun release() {
         try {
             cameraProvider?.unbindAll()
