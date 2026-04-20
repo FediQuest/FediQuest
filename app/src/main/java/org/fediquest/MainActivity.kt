@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -12,7 +13,6 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Scale
-import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.graphics.Bitmap
 import android.location.Location
@@ -146,41 +146,38 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Setup SceneView integration (Primary AR Engine)
+     * Uses setOnTapListener for AR object placement as per SceneView 4.0.1 API
      */
     private fun setupSceneView() {
         Log.d(TAG, "Initializing SceneView native AR")
 
         try {
-            // Set up tap listener for placing spawn objects
-            arSceneView.setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    handleTapOnScreen(event.x, event.y)
-                    true
-                } else {
-                    false
-                }
+            // Set up tap listener for placing spawn objects using SceneView 4.0.1 API
+            arSceneView.setOnTapListener { hitResult ->
+                // HitResult contains position and plane information for AR placement
+                val position = io.github.sceneview.math.Position(
+                    hitResult.position.x,
+                    hitResult.position.y,
+                    hitResult.position.z
+                )
+                
+                // Create and place a model node at the hit position
+                val node = ModelNode(
+                    model = io.github.sceneview.model.ModelBuilder.create {
+                        uri = android.net.Uri.parse("file:///android_asset/spawn.glb")
+                        scale = io.github.sceneview.math.Scale(0.5f, 0.5f, 0.5f)
+                    }
+                )
+                node.position = position
+                arSceneView.scene.addChild(node)
+                
+                Log.d(TAG, "AR object placed at: ${position}")
+                true
             }
 
-            Log.d(TAG, "SceneView initialized successfully")
+            Log.d(TAG, "SceneView initialized successfully with setOnTapListener")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing SceneView: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Handle tap on screen to place or interact with spawn objects
-     */
-    private fun handleTapOnScreen(x: Float, y: Float) {
-        try {
-            // Perform hit test to find surfaces in the real world
-            // SceneView 4.x API: requires plane, depth, instant parameters
-            val hitResult = arSceneView.hitTest(x, y, plane = true, depth = true, instant = false)
-
-            hitResult?.let { hit ->
-                Log.d(TAG, "Hit detected at: ${hit.distance}m")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error handling tap: ${e.message}", e)
         }
     }
 
@@ -339,7 +336,7 @@ class MainActivity : AppCompatActivity() {
                 photoFile.delete()
             }
 
-            override fun onError(exception: androidx.camera.core.ImageCaptureException) {
+            override fun onError(exception: ImageCaptureException) {
                 Log.e(TAG, "Error capturing image: ${exception.message}", exception)
                 showRetryDialog("Failed to capture image. Try again?")
             }
