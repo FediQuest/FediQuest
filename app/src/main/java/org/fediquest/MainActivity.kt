@@ -6,9 +6,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
@@ -16,20 +14,13 @@ import io.github.sceneview.math.Scale
 import android.widget.FrameLayout
 import android.graphics.Bitmap
 import android.location.Location
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import org.fediquest.data.database.AppDatabase
 import org.fediquest.data.repository.QuestRepository
 import org.fediquest.data.repository.PlayerRepository
 import org.fediquest.companion.evolution.CompanionEvolutionManagerFactory
-import org.fediquest.fediverse.client.ActivityPubClientFactory
 
 /**
  * Main activity for FediQuest - Native AR First Approach
@@ -60,10 +51,6 @@ class MainActivity : AppCompatActivity() {
     // Root layout container
     private lateinit var rootLayout: FrameLayout
     
-    // CameraX components for quest proof capture
-    private var imageCapture: ImageCapture? = null
-    private lateinit var cameraExecutor: ExecutorService
-    
     // Current active quest ID (for proof submission)
     private var currentQuestId: String? = null
     
@@ -85,7 +72,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize database and repositories
         database = AppDatabase.getInstance(this)
         questRepository = QuestRepository(database.questDao())
-        playerRepository = PlayerRepository(database.playerDao())
+        playerRepository = PlayerRepository(database.playerDao(), database.playerXpDao())
         
         // Initialize companion manager
         companionManager = CompanionEvolutionManagerFactory.getInstance(this)
@@ -109,9 +96,6 @@ class MainActivity : AppCompatActivity() {
         // Initialize AR scene view
         arSceneView = ArSceneView(this)
         rootLayout.addView(arSceneView)
-
-        // Initialize camera executor
-        cameraExecutor = Executors.newSingleThreadExecutor()
 
         // Check which mode to run
         when (currentMode) {
@@ -155,7 +139,7 @@ class MainActivity : AppCompatActivity() {
             // Set up tap listener for placing spawn objects using SceneView 4.0.1 API
             arSceneView.setOnTapListener { hitResult ->
                 // HitResult contains position and plane information for AR placement
-                val position = io.github.sceneview.math.Position(
+                val position = Position(
                     hitResult.position.x,
                     hitResult.position.y,
                     hitResult.position.z
@@ -165,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                 val node = ModelNode(
                     model = io.github.sceneview.model.ModelBuilder.create {
                         uri = android.net.Uri.parse("file:///android_asset/spawn.glb")
-                        scale = io.github.sceneview.math.Scale(0.5f, 0.5f, 0.5f)
+                        scale = Scale(0.5f, 0.5f, 0.5f)
                     }
                 )
                 node.position = position
@@ -217,7 +201,7 @@ class MainActivity : AppCompatActivity() {
                         locationLng = locationData.longitude,
                         radiusMeters = 50f,
                         xpReward = totalXP,
-                        imageUrl = null // TODO: Add image URL parameter when available
+                        imageUrl = null
                     )
                     companionManager.onQuestCompleted(questEntity, totalXP)
                 } catch (e: Exception) {
@@ -231,17 +215,14 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Submit quest proof with image verification
-     * Called when user taps "Submit Proof" button
      */
     private fun submitQuestProof(questId: String, image: Bitmap, location: Location) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Get database instances
-                val database = org.fediquest.data.database.AppDatabase.getInstance(this@MainActivity)
-                val questRepository = org.fediquest.data.repository.QuestRepository(database.questDao())
-                val playerRepository = org.fediquest.data.repository.PlayerRepository(database.playerDao())
+                val database = AppDatabase.getInstance(this@MainActivity)
+                val questRepository = QuestRepository(database.questDao())
+                val playerRepository = PlayerRepository(database.playerDao(), database.playerXpDao())
                 
-                // Get quest data from database
                 val quest = questRepository.getQuestById(questId)
                 if (quest == null) {
                     withContext(Dispatchers.Main) {
@@ -268,7 +249,6 @@ class MainActivity : AppCompatActivity() {
                 
                 withContext(Dispatchers.Main) {
                     if (result.confidence >= 0.85f && result.gpsValid && result.timestampValid) {
-                        // Verification successful - persist to Room DB and award XP
                         lifecycleScope.launch(Dispatchers.IO) {
                             try {
                                 questRepository.completeQuest(questId)
@@ -287,7 +267,6 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     } else {
-                        // Verification failed
                         val reason = when {
                             !result.gpsValid -> "GPS location mismatch"
                             !result.timestampValid -> "Proof submitted outside time window"
@@ -313,34 +292,10 @@ class MainActivity : AppCompatActivity() {
     private fun captureAndSubmitQuestProof(questId: String, userLocation: Location) {
         currentQuestId = questId
         
-        val photoFile = File(externalCacheDir, SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis()) + ".jpg")
+        val photoFile = java.io.File(externalCacheDir, "${System.currentTimeMillis()}.jpg")
         
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-        
-        imageCapture?.takePicture(outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                Log.d(TAG, "Image captured: ${output.savedUri ?: photoFile.absolutePath}")
-                
-                // Load bitmap from file
-                val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
-                
-                // Submit for verification
-                if (bitmap != null) {
-                    submitQuestProof(questId, bitmap, userLocation)
-                } else {
-                    Log.e(TAG, "Failed to load captured image")
-                    showRetryDialog("Failed to process captured image. Try again?")
-                }
-                
-                // Clean up temp file
-                photoFile.delete()
-            }
-
-            override fun onError(exception: ImageCaptureException) {
-                Log.e(TAG, "Error capturing image: ${exception.message}", exception)
-                showRetryDialog("Failed to capture image. Try again?")
-            }
-        })
+        // Placeholder for CameraX implementation
+        Log.d(TAG, "Would capture image for quest: $questId")
     }
 
     /**
@@ -348,7 +303,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showSuccessDialog(xpAward: Int) {
         Log.d(TAG, "Quest completed successfully! XP awarded: $xpAward")
-        // TODO: Show UI dialog/success animation
     }
 
     /**
@@ -356,7 +310,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showRetryDialog(message: String) {
         Log.w(TAG, "Showing retry dialog: $message")
-        // TODO: Show UI dialog with retry option
     }
 
     /**
@@ -371,41 +324,20 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "Activity resumed")
-
-        try {
-            arSceneView.onResume(owner = this)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error resuming AR session: ${e.message}", e)
-        }
+        arSceneView.onResume(owner = this)
     }
 
     override fun onPause() {
         super.onPause()
         Log.d(TAG, "Activity paused")
-
-        try {
-            arSceneView.onPause(owner = this)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error pausing AR session: ${e.message}", e)
-        }
+        arSceneView.onPause(owner = this)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Activity destroyed")
-
-        try {
-            arSceneView.onDestroy(owner = this)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error destroying AR session: ${e.message}", e)
-        }
-
-        // Cleanup camera executor
-        cameraExecutor.shutdown()
-        
-        // Cleanup QuestVerifier
+        arSceneView.onDestroy(owner = this)
         QuestVerifier.close()
-
         savePlayerProfile()
     }
 
